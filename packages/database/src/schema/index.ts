@@ -8,3 +8,7 @@ export * from './profile-views';
 export * from './payments';
 export * from './subscriptions';
 export * from './ai';
+export * from './crypto';
+export * from './workflows';
+export * from './experiments';
+export * from './agents';
