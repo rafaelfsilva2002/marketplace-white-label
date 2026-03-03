@@ -1,5 +1,6 @@
 import { HeroSearch } from '@/components/search/hero-search';
 import { ProfileCard } from '@/components/profiles/profile-card';
+import { RecommendationsSection } from '@/components/profiles/recommendations-section';
 
 // Server Component — fetches data at request time
 export default async function HomePage() {
@@ -52,6 +53,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <RecommendationsSection title="Recomendados para Voce" />
     </main>
   );
 }

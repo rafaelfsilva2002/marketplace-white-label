@@ -2,6 +2,7 @@ import { MapPin, Star, Shield, Clock, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { RecommendationsSection } from '@/components/profiles/recommendations-section';
 
 interface PageProps {
   params: { id: string };
@@ -167,6 +168,11 @@ export default async function ProfilePage({ params }: PageProps) {
           </Card>
         </div>
       </div>
+
+      <RecommendationsSection
+        profileId={params.id}
+        title="Profissionais Similares"
+      />
     </main>
   );
 }

@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Query,
   ParseIntPipe,
   ParseFloatPipe,
@@ -9,12 +11,14 @@ import {
 } from '@nestjs/common';
 import { SearchService } from '../services/search.service';
 import { GeoSearchService } from '../services/geo-search.service';
+import { SemanticSearchService } from '../services/semantic-search.service';
 
 @Controller('search')
 export class SearchController {
   constructor(
     private readonly searchService: SearchService,
     private readonly geoSearchService: GeoSearchService,
+    private readonly semanticSearchService: SemanticSearchService,
   ) {}
 
   @Get()
@@ -107,5 +111,41 @@ export class SearchController {
       limit,
       services,
     });
+  }
+
+  @Post('semantic')
+  async semanticSearch(
+    @Body() body: {
+      query: string;
+      city?: string;
+      state?: string;
+      limit?: number;
+    },
+  ) {
+    if (!body.query || !body.query.trim()) {
+      throw new BadRequestException('Field "query" is required');
+    }
+
+    const limit = body.limit ?? 20;
+
+    if (limit < 1 || limit > 100) {
+      throw new BadRequestException('Field "limit" must be between 1 and 100');
+    }
+
+    const results = await this.semanticSearchService.search(body.query, {
+      city: body.city,
+      state: body.state,
+      limit,
+    });
+
+    return {
+      results: results.map((r) => r.profile),
+      meta: {
+        query: body.query,
+        mode: 'semantic' as const,
+        count: results.length,
+        similarities: results.map((r) => r.similarity),
+      },
+    };
   }
 }

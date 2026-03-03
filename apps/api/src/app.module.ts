@@ -8,6 +8,8 @@ import { ModerationModule } from './modules/moderation/moderation.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     PaymentsModule,
     SubscriptionsModule,
     WebhooksModule,
+    RecommendationsModule,
+    PricingModule,
   ],
 })
 export class AppModule {}

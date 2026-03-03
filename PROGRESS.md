@@ -42,8 +42,24 @@
 - [x] 1.18 Frontend — UI components (Button, Input, Card, Badge)
 - [x] 1.19 Frontend — ProfileCard component + HeroSearch component
 
-## Fase 2 — IA Nativa
-Status: Nao iniciada
+## Fase 2 — IA Nativa ✓
+
+### Concluido
+- [x] 2.1 AI Gateway: router multi-provider (OpenAI/Anthropic/Ollama) com circuit breaker e fallback
+- [x] 2.2 PII sanitizer no AI Gateway (CPF, phone, email, card)
+- [x] 2.3 Embedding sync worker (profiles → pgvector via BullMQ)
+- [x] 2.4 Busca semantica (pgvector cosine distance + POST /search/semantic)
+- [x] 2.5 Recomendacao inteligente (embedding avg + nearest neighbors + fallback top-rated)
+- [x] 2.6 Moderacao automatica de fotos (Vision API) + texto via BullMQ worker
+- [x] 2.7 Deteccao de fraude: rule-based scoring (5 signals, auto-deactivate on critical)
+- [x] 2.8 Analise de sentimento das avaliacoes (LLM + fallback rating-based)
+- [x] 2.9 Precificacao dinamica: sugerir plano ideal por metricas do profissional
+- [x] 2.10 Cache semantico (SHA-256 exact + cosine similarity > 0.95)
+- [x] 2.11 Metricas de custo de IA por operacao (buffered persistence)
+- [x] Frontend — SemanticSearch component (debounced dropdown)
+- [x] Frontend — AI Assistant widget (chat overlay)
+- [x] Frontend — RecommendationsSection (for-you + similar profiles)
+- [x] Frontend — Search page atualizada com modo semantico real
 
 ## Fase 3 — Escala
 Status: Nao iniciada

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { AIAssistant } from '@/components/ai/ai-assistant';
 
 export default function MarketplaceLayout({
   children,
@@ -38,6 +39,8 @@ export default function MarketplaceLayout({
           Marketplace AI-Native — Busca inteligente de profissionais
         </div>
       </footer>
+
+      <AIAssistant />
     </div>
   );
 }

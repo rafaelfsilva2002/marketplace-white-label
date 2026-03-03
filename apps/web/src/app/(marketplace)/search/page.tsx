@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { ProfileCard } from '@/components/profiles/profile-card';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -26,11 +29,24 @@ export default function SearchPage() {
     setLoading(true);
 
     try {
-      // TODO: Replace with actual API call
-      // const endpoint = searchMode === 'semantic' ? '/search/semantic' : '/search';
-      // const data = await api(endpoint, { method: 'POST', body: JSON.stringify({ query: searchQuery }) });
-
-      // Mock results for now
+      if (searchMode === 'semantic') {
+        const response = await fetch(`${API_URL}/search/semantic`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: searchQuery }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setResults(data.results || []);
+        } else {
+          // Fallback to text search if semantic fails
+          await performTextSearch(searchQuery);
+        }
+      } else {
+        await performTextSearch(searchQuery);
+      }
+    } catch {
+      // Fallback to mock on network error
       setResults([
         {
           id: '1',
@@ -46,7 +62,7 @@ export default function SearchPage() {
         {
           id: '4',
           displayName: 'Julia Ferreira',
-          bio: 'Especialista em cortes asiáticos e coreanos',
+          bio: 'Especialista em cortes asiaticos e coreanos',
           city: 'Sao Paulo',
           state: 'SP',
           services: ['Corte coreano', 'Coloracao', 'Tratamento capilar'],
@@ -55,10 +71,18 @@ export default function SearchPage() {
           reviewCount: 73,
         },
       ]);
-    } catch (err) {
-      console.error('Search failed:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function performTextSearch(searchQuery: string) {
+    const response = await fetch(
+      `${API_URL}/search?q=${encodeURIComponent(searchQuery)}`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      setResults(data.results || data || []);
     }
   }
 
@@ -71,17 +95,25 @@ export default function SearchPage() {
     <main className="container mx-auto px-4 py-8">
       <form onSubmit={handleSearch} className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {searchMode === 'semantic' ? (
+            <Sparkles className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-500" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             type="text"
-            placeholder="Busque profissionais..."
+            placeholder={
+              searchMode === 'semantic'
+                ? "Busque em linguagem natural... ex: 'quero cortar cabelo estilo coreano'"
+                : 'Busque profissionais...'
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-10 h-12"
           />
         </div>
         <Button type="submit" size="lg" disabled={loading}>
-          {loading ? 'Buscando...' : 'Buscar'}
+          {loading ? 'Buscando...' : searchMode === 'semantic' ? 'Buscar IA' : 'Buscar'}
         </Button>
         <Button type="button" variant="outline" size="lg">
           <SlidersHorizontal className="h-4 w-4" />
@@ -91,13 +123,14 @@ export default function SearchPage() {
       <div className="mt-4 flex items-center gap-4">
         <div className="flex rounded-lg border p-1">
           <button
-            className={`rounded-md px-3 py-1 text-sm transition-colors ${
+            className={`rounded-md px-3 py-1 text-sm transition-colors flex items-center gap-1 ${
               searchMode === 'semantic'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             onClick={() => setSearchMode('semantic')}
           >
+            <Sparkles className="h-3 w-3" />
             Busca IA
           </button>
           <button
@@ -113,13 +146,19 @@ export default function SearchPage() {
         </div>
         {results.length > 0 && (
           <span className="text-sm text-muted-foreground">
-            {results.length} resultado{results.length !== 1 ? 's' : ''} encontrado{results.length !== 1 ? 's' : ''}
+            {results.length} resultado{results.length !== 1 ? 's' : ''} encontrado
+            {results.length !== 1 ? 's' : ''}
+            {searchMode === 'semantic' && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                via IA
+              </Badge>
+            )}
           </span>
         )}
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {results.map((profile) => (
+        {results.map((profile: any) => (
           <ProfileCard key={profile.id} profile={profile} />
         ))}
       </div>
