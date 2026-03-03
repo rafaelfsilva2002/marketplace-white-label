@@ -1,0 +1,24 @@
+{
+  "name": "@marketplace/workers",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "bullmq": "^5.30.0",
+    "ioredis": "^5.4.0",
+    "@marketplace/database": "workspace:*",
+    "@marketplace/shared": "workspace:*",
+    "@marketplace/ai-gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

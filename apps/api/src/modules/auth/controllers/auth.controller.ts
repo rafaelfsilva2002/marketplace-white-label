@@ -1,0 +1,163 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+  UseGuards,
+  Headers,
+} from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
+import { ApiResponse } from '@marketplace/shared';
+import { AuthService, AuthenticatedUser } from '../services/auth.service';
+import { TokenPair } from '../services/token.service';
+import { RegisterDto } from '../dto/register.dto';
+import { LoginDto } from '../dto/login.dto';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { JwtUser } from '../strategies/jwt.strategy';
+import { RateLimitGuard } from '@/common/guards/rate-limit.guard';
+
+interface AuthResponse {
+  user: AuthenticatedUser;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+@Controller('auth')
+@UseGuards(RateLimitGuard)
+export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body() dto: RegisterDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<AuthResponse>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Registration request',
+      email: dto.email,
+      correlationId,
+    });
+
+    const result = await this.authService.register(dto, correlationId);
+
+    return {
+      success: true,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      },
+    };
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body() dto: LoginDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<AuthResponse>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Login request',
+      email: dto.email,
+      correlationId,
+    });
+
+    const result = await this.authService.login(dto, correlationId);
+
+    return {
+      success: true,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      },
+    };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @Body('refreshToken') refreshToken: string,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<Omit<AuthResponse, 'user'>>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Token refresh request',
+      correlationId,
+    });
+
+    const tokens: TokenPair = await this.authService.refresh(
+      refreshToken,
+      correlationId,
+    );
+
+    return {
+      success: true,
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+      },
+    };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async logout(
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Logout request',
+      userId: user.id,
+      correlationId,
+    });
+
+    await this.authService.logout(user.id, correlationId);
+
+    return {
+      success: true,
+      data: { message: 'Logged out successfully' },
+    };
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async me(
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<AuthenticatedUser>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Profile request',
+      userId: user.id,
+      correlationId,
+    });
+
+    const profile = await this.authService.getProfile(user.id);
+
+    return {
+      success: true,
+      data: profile,
+    };
+  }
+}
