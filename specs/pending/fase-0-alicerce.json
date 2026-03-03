@@ -1,0 +1,24 @@
+{
+  "metadata": { "name": "Fase 0: Alicerce Multi‑tenant", "version": "1.0.0", "tenantContext": "multi-tenant", "priority": "critical", "estimatedHours": 40 },
+  "phases": [ { "id": "phase-0", "title": "Fundação: Infra, Tenancy e Observabilidade", "tasks": [ "task-0-1", "task-0-2", "task-0-3", "task-0-4", "task-0-5", "task-0-6", "task-0-7", "task-0-8", "task-0-9", "task-0-10", "task-0-11", "task-0-12", "task-0-13", "task-0-14", "task-0-15", "task-0-16", "task-0-17", "task-0-18" ] } ],
+  "tasks": [
+    { "id": "task-0-1", "title": "Criar estrutura base NestJS com TypeORM e PostgreSQL", "dependencies": [], "verification": [ "API sobe e conecta ao banco", "Migrações funcionam" ] },
+    { "id": "task-0-2", "title": "Implementar TenantInterceptor: extrai tenant do Host e valida contra allowlist", "dependencies": ["task-0-1"], "verification": [ "Host `parceiroa.localhost` → tenant A", "Host desconhecido → 404" ] },
+    { "id": "task-0-3", "title": "Criar TenantContext com AsyncLocalStorage", "dependencies": ["task-0-2"], "verification": [ "Tenant disponível em serviços", "Requisições concorrentes não misturam tenants" ] },
+    { "id": "task-0-4", "title": "Adicionar coluna tenant_id em todas as tabelas (migration)", "dependencies": ["task-0-1"], "verification": [ "Script idempotente", "Índices compostos com tenant_id" ] },
+    { "id": "task-0-5", "title": "Criar repositório base com filtro automático de tenant", "dependencies": ["task-0-3", "task-0-4"], "verification": [ "Todas as queries incluem tenantId", "Teste de vazamento: query sem tenant falha" ] },
+    { "id": "task-0-6", "title": "Configurar RLS no PostgreSQL e políticas por tabela", "dependencies": ["task-0-4"], "verification": [ "Policy aplicada", "Teste: usuário tenta acessar outro tenant via SQL direto → 0 registros" ] },
+    { "id": "task-0-7", "title": "Criar tabela `tenants` e `tenant_config` (JSONB)", "dependencies": ["task-0-1"], "verification": [ "Campos: id, name, domains[], config JSONB" ] },
+    { "id": "task-0-8", "title": "Implementar cache Redis para resolução de tenant e config", "dependencies": ["task-0-2", "task-0-7"], "verification": [ "Cache com TTL", "Fallback para banco" ] },
+    { "id": "task-0-9", "title": "Criar AuthModule: JWT, refresh token, revogação", "dependencies": ["task-0-3"], "verification": [ "SEC‑001: JWT curto, refresh rotativo", "Teste de replay de refresh" ] },
+    { "id": "task-0-10", "title": "Implementar RBAC com roles e guards", "dependencies": ["task-0-9"], "verification": [ "SEC‑002: acesso negado para role inadequada", "BOLA tests" ] },
+    { "id": "task-0-11", "title": "Criar Rate Limiter middleware (por tenant, user, operação)", "dependencies": ["task-0-3", "task-0-9"], "verification": [ "SEC‑003: 429 após exceder", "Configurável via feature flag" ] },
+    { "id": "task-0-12", "title": "Implementar Audit Log (tabela append‑only)", "dependencies": ["task-0-4"], "verification": [ "SEC‑004: ações financeiras e admin logadas", "Imutabilidade" ] },
+    { "id": "task-0-13", "title": "Criar tabela outbox e dispatcher", "dependencies": ["task-0-4"], "verification": [ "EVT‑002: evento só publicado após commit", "Retry com backoff" ] },
+    { "id": "task-0-14", "title": "Definir envelope padrão de eventos e validar schema", "dependencies": [], "verification": [ "EVT‑001: evento contém campos obrigatórios", "CI valida JSON Schema" ] },
+    { "id": "task-0-15", "title": "Configurar correlationId em logger e tracing", "dependencies": [], "verification": [ "OBS‑001: logs contêm correlationId", "Propagação em chamadas HTTP" ] },
+    { "id": "task-0-16", "title": "Criar testes de integração para todos os itens acima", "dependencies": ["task-0-1", "task-0-2", "task-0-3", "task-0-4", "task-0-5", "task-0-6", "task-0-7", "task-0-8", "task-0-9", "task-0-10", "task-0-11", "task-0-12", "task-0-13", "task-0-14", "task-0-15"], "verification": [ "Cobertura mínima 80%", "Testes de isolamento de tenant" ] },
+    { "id": "task-0-17", "title": "Implementar chaves primárias compostas com tenant_id em todas as tabelas", "dependencies": ["task-0-4"], "verification": [ "Todas as PKs incluem tenant_id", "Índices atualizados", "FKs também incluem tenant_id" ] },
+    { "id": "task-0-18", "title": "Configurar tabelas de referência (dados compartilhados entre tenants)", "dependencies": ["task-0-4"], "verification": [ "Tabelas de referência acessíveis por todos os tenants", "Joins funcionam sem vazar dados" ] }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "name": "Fase 4: Capacidades AI-Native (Gateway, Agentes, Self-Optimizing)",
+    "version": "1.0.0",
+    "tenantContext": "multi-tenant",
+    "priority": "medium",
+    "estimatedHours": 160,
+    "adrs": ["024", "025", "026", "027", "028", "029", "030"],
+    "requirements": ["AI-001", "AI-002", "AI-003", "AI-004", "AI-005", "AI-006", "AI-007", "AI-008", "AI-009", "AI-010"]
+  },
+  "phases": [
+    {
+      "id": "phase-4a",
+      "title": "AI Gateway Base + Embedding Sync (Fase 2 extension)",
+      "tasks": ["task-2-21", "task-2-22", "task-2-23", "task-2-24"]
+    },
+    {
+      "id": "phase-4b",
+      "title": "AI Quality + Agent Runtime (Fase 3 extension)",
+      "tasks": ["task-3-11", "task-3-12"]
+    },
+    {
+      "id": "phase-4c",
+      "title": "AI-Native Completo",
+      "tasks": ["task-4-1", "task-4-2", "task-4-3"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-2-21",
+      "title": "Implementar AI Gateway: router multi-provider + PII sanitizer",
+      "dependencies": ["fase-0"],
+      "adrs": ["024", "021"],
+      "requirements": ["AI-001", "AI-010"],
+      "description": "Criar packages/ai-gateway com: roteamento para OpenAI/Anthropic/Ollama, circuit breaker por provider, PII sanitizer (regex + NER), feature flags por tenant, lint rule bloqueando imports diretos de SDKs de IA.",
+      "verification": [
+        "AI Gateway roteia chamadas para providers com fallback automático",
+        "PII (CPF, email, telefone) é sanitizada antes do envio ao provider",
+        "Lint rule no CI bloqueia imports diretos de SDKs de IA fora do gateway",
+        "Feature flags por tenant habilitam/desabilitam features de IA",
+        "Circuit breaker dispara após 3 falhas consecutivas no provider"
+      ]
+    },
+    {
+      "id": "task-2-22",
+      "title": "Implementar cache semântico + roteamento por custo no AI Gateway",
+      "dependencies": ["task-2-21"],
+      "adrs": ["024"],
+      "requirements": ["AI-001", "AI-003"],
+      "description": "Adicionar ao AI Gateway: cache semântico usando pgvector (similaridade > 0.95 retorna cache), roteamento por custo (escolhe modelo mais barato que atenda threshold de qualidade), rate limiting por tenant.",
+      "verification": [
+        "Prompts similares (cosine > 0.95) retornam resposta cacheada sem chamar provider",
+        "Cache hit rate mensurável por tenant e feature",
+        "Rate limiting por tenant funciona com Redis como backend",
+        "Roteamento escolhe modelo mais barato que atenda qualidade mínima"
+      ]
+    },
+    {
+      "id": "task-2-23",
+      "title": "Implementar Embedding Sync Worker via outbox events",
+      "dependencies": ["task-2-21", "fase-0"],
+      "adrs": ["025", "005"],
+      "requirements": ["AI-002"],
+      "description": "Criar apps/workers/embedding-sync que escuta eventos embedding.sync.requested do outbox, gera embeddings via AI Gateway, e armazena em pgvector. SLO: 95% em < 60s.",
+      "verification": [
+        "Criação de entidade gera evento embedding.sync.requested no outbox",
+        "Worker processa evento e gera embedding via AI Gateway",
+        "Embedding armazenado em pgvector com tenant_id e RLS",
+        "95% dos embeddings sincronizados em < 60 segundos",
+        "Monitoring de freshness com alerta quando < 95%"
+      ]
+    },
+    {
+      "id": "task-2-24",
+      "title": "Implementar AI Metering: custo por tenant por operação",
+      "dependencies": ["task-2-21"],
+      "adrs": ["026", "014"],
+      "requirements": ["AI-004"],
+      "description": "Cada chamada ao AI Gateway registra métricas de custo (tokens input + output, provider, modelo). Integração com metering service (ADR-014) para billing. Dashboard de custo por tenant.",
+      "verification": [
+        "Cada chamada registra: provider, modelo, tokens, custo em USD",
+        "Dashboard de custo de IA por tenant com projeção mensal",
+        "Cost cap por tenant com throttling automático ao exceder",
+        "Integração com metering service emite OutcomeType.AI_COMPLETION"
+      ]
+    },
+    {
+      "id": "task-3-11",
+      "title": "Implementar AI Quality Metrics: feedback loop + hallucination detection",
+      "dependencies": ["task-2-24"],
+      "adrs": ["026"],
+      "requirements": ["AI-005"],
+      "description": "Coletar quality score via feedback (ratings de usuário), calcular hallucination rate para operações com ground truth, monitorar fallback rate por provider.",
+      "verification": [
+        "Quality score coletado via feedback loop",
+        "Hallucination rate calculado para operações verificáveis",
+        "Fallback rate monitorado por provider",
+        "Dashboard com métricas de qualidade por modelo e feature",
+        "Alertas quando quality score < threshold"
+      ]
+    },
+    {
+      "id": "task-3-12",
+      "title": "Implementar Agent Runtime com estado persistido + human-in-the-loop",
+      "dependencies": ["task-2-21", "task-3-5"],
+      "adrs": ["028", "018"],
+      "requirements": ["AI-007"],
+      "description": "Criar runtime de agentes em apps/workers/agent-runtime: estado persistido em PostgreSQL, limites de iteração configuráveis, budget limit, human-in-the-loop para ações financeiras/destrutivas, audit log de decisões.",
+      "verification": [
+        "Estado do agente persistido entre steps (não em memória)",
+        "Limites de iteração configuráveis por tipo e tenant",
+        "Budget limit interrompe agente ao exceder custo",
+        "Ações financeiras/destrutivas requerem aprovação humana",
+        "Audit log registra todas as decisões com chain-of-thought"
+      ]
+    },
+    {
+      "id": "task-4-1",
+      "title": "Implementar A/B Testing de LLMs: router por variante + métricas",
+      "dependencies": ["task-2-22", "task-3-11"],
+      "adrs": ["027"],
+      "requirements": ["AI-006"],
+      "description": "AI Gateway divide tráfego entre variantes (modelo A vs B) por percentual. Coleta métricas por variante. Rollback automático se variante degrada qualidade.",
+      "verification": [
+        "Tráfego dividido por percentual entre variantes",
+        "Métricas por variante: custo, latência, quality score",
+        "Tenants atribuídos a variantes específicas",
+        "Rollback automático se qualidade degrada > threshold",
+        "Cálculo de significância estatística antes de declarar vencedor"
+      ]
+    },
+    {
+      "id": "task-4-2",
+      "title": "Implementar Decision Delegation: 3 níveis de autonomia",
+      "dependencies": ["task-3-12"],
+      "adrs": ["029"],
+      "requirements": ["AI-008"],
+      "description": "Engine de delegação com 3 níveis: L0 (sugere), L1 (decide com confirmação), L2 (autônomo). Progressão baseada em acerto. Threshold configurável por tenant_admin.",
+      "verification": [
+        "3 níveis de autonomia funcionais",
+        "Progressão de nível baseada em taxa de acerto (>95% para L2)",
+        "Regressão automática se erro > 5%",
+        "Threshold configurável pelo tenant_admin",
+        "Audit log com nível, score, decisão"
+      ]
+    },
+    {
+      "id": "task-4-3",
+      "title": "Implementar Self-Optimizing Policies: feedback loop + OPA pipeline",
+      "dependencies": ["task-4-2", "task-3-2"],
+      "adrs": ["030"],
+      "requirements": ["AI-009"],
+      "description": "Feedback collector registra outcomes. Analyzer (LLM) identifica padrões e sugere ajustes. Pipeline controlado para atualizar políticas OPA com revisão humana acima de threshold.",
+      "verification": [
+        "Feedback collector registra outcomes de decisões",
+        "Analyzer identifica padrões e gera sugestões",
+        "Sugestões com impacto > threshold requerem aprovação humana",
+        "Pipeline atualiza políticas OPA com versionamento",
+        "Métricas de melhoria por política por tenant"
+      ]
+    }
+  ]
+}

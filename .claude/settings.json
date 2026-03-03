@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "spec-workflow": {
+      "command": "spec-workflow-mcp",
+      "args": ["--project-dir", "C:/Users/manod/Downloads/marketplace white label"]
+    }
+  }
+}

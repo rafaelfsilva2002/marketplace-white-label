@@ -1,0 +1,16 @@
+{
+  "metadata": { "name": "Fase 3: Capacidades Enterprise (Trust, Orquestração, Escala)", "version": "1.0.0", "tenantContext": "multi-tenant", "priority": "medium", "estimatedHours": 120 },
+  "phases": [ { "id": "phase-3", "title": "Trust, Orquestração e Gestão Enterprise", "tasks": [ "task-3-1", "task-3-2", "task-3-3", "task-3-4", "task-3-5", "task-3-6", "task-3-7", "task-3-8", "task-3-9", "task-3-10" ] } ],
+  "tasks": [
+    { "id": "task-3-1", "title": "Implementar serviço de metering e billing baseado em consumo", "dependencies": ["fase-2"], "verification": [ "Eventos de negócio geram records de metering", "Metering é imutável e auditável", "Integração com Stripe para billing variável" ] },
+    { "id": "task-3-2", "title": "Integrar Open Policy Agent (OPA) para políticas de autorização", "dependencies": ["fase-0"], "verification": [ "Todas as decisões de autorização consultam OPA", "Políticas podem ser atualizadas sem redeploy" ] },
+    { "id": "task-3-3", "title": "Implementar lineage de dados (tabela `data_lineage` + eventos)", "dependencies": ["fase-0"], "verification": [ "Cada transformação gera lineage event", "É possível rastrear origem de qualquer dado" ] },
+    { "id": "task-3-4", "title": "Criar serviço de rastreamento de outcomes para pricing por resultado", "dependencies": ["task-3-1"], "verification": [ "Outcomes configuráveis por contrato", "Relatórios auditáveis" ] },
+    { "id": "task-3-5", "title": "Implementar camada de orquestração com Temporal/Step Functions", "dependencies": [], "verification": [ "Workflows longos são gerenciados e auditáveis", "Capacidade de replay" ] },
+    { "id": "task-3-6", "title": "Expor APIs SCIM para provisionamento de usuários", "dependencies": ["fase-1"], "verification": [ "Integração com Okta validada", "Cria/atualiza/desativa usuários automaticamente" ] },
+    { "id": "task-3-7", "title": "Expor APIs de auditoria e logs para SIEM", "dependencies": ["fase-0"], "verification": [ "Logs incluem tenant_id, user_id, ação, timestamp", "API permite consulta por período e tenant" ] },
+    { "id": "task-3-8", "title": "Implementar backup searchável (active backups)", "dependencies": ["fase-0"], "verification": [ "Backups podem ser consultados via SQL", "Retenção configurável por tenant" ] },
+    { "id": "task-3-9", "title": "Adicionar tagging e cost allocation para FinOps", "dependencies": ["fase-0"], "verification": [ "Todos os recursos têm tags tenant_id", "Relatórios de custo por tenant disponíveis" ] },
+    { "id": "task-3-10", "title": "Configurar GitOps com OCI Artifacts (Flux D2)", "dependencies": ["infra"], "verification": [ "Deploys usam OCI, não Git", "Artefatos assinados com Cosign" ] }
+  ]
+}
