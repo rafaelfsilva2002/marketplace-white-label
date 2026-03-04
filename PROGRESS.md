@@ -76,8 +76,18 @@ Status: Em andamento
   - [x] RampService (on/off ramp BRL↔crypto)
   - [x] Design: Dfns MPC custody, dual wallet (BRL + crypto), adapter pattern
 
+- [x] 3.2 Compliance AML para transacoes cripto
+  - [x] Schema: aml_screenings, suspicious_activity_reports, aml_review_queue, aml_blacklists, aml_rate_limits
+  - [x] AmlProvider interface + InternalAmlAdapter (blacklists DB, wallet rate limiting, fraud cross-check)
+  - [x] SarService (SAR persistence + lifecycle)
+  - [x] ReviewQueueService (approve/reject/assign for moderators)
+  - [x] AML Screening Worker (async BullMQ)
+  - [x] AmlController (REST endpoints for queue, SARs, blacklists, screenings)
+  - [x] BlacklistService (CRUD for admin-managed blacklists)
+  - [x] Travel rule for txs > $1000 USD
+  - [x] Per-wallet rate limiting
+
 ### Pendente
-- [ ] 3.2 Compliance AML para transacoes cripto
 - [ ] 3.3 Orquestracao com Temporal (workflows longos)
 - [ ] 3.4 Agentes IA com estado persistido
 - [ ] 3.5 A/B testing de modelos e prompts
