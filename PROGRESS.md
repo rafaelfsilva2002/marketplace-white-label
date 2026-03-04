@@ -308,6 +308,13 @@
   - [x] k6/scripts/search-test.js (FTS + semantic, <500ms p95)
   - [x] k6/scripts/auth-test.js (register/login/me, <200ms p95)
   - [x] k6/scripts/profiles-test.js (list + health, <200ms p95)
+- [x] 12.6 Frontend auth pages
+  - [x] /forgot-password page (email form, success state)
+  - [x] /reset-password page (token from URL, password confirmation)
+  - [x] Login page: added "Esqueci minha senha" link
+- [x] 12.7 Profile endpoints
+  - [x] POST /profiles/:id/photos (add photos with ownership check)
+  - [x] POST /profiles/:id/verify (request verification, outbox event)
 
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
