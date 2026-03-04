@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { Database, users } from '@marketplace/database';
 import { UserRole } from '@marketplace/shared';
 import { DATABASE_TOKEN } from '@/config/database.config';
@@ -361,5 +362,184 @@ export class AuthService {
     });
 
     return { message: 'Account deleted' };
+  }
+
+  async requestEmailVerification(
+    userId: string,
+    correlationId: string,
+  ): Promise<{ message: string; token: string }> {
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        isVerified: users.isVerified,
+        metadata: users.metadata,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isVerified) throw new ConflictException('Email already verified');
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+    await this.db
+      .update(users)
+      .set({
+        metadata: {
+          ...((user.metadata as Record<string, unknown>) || {}),
+          emailVerificationToken: token,
+          emailVerificationExpires: expiresAt.toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+
+    this.logger.log({
+      message: 'Email verification requested',
+      userId,
+      correlationId,
+    });
+
+    return { message: 'Verification email sent', token };
+  }
+
+  async verifyEmail(
+    token: string,
+    correlationId: string,
+  ): Promise<{ message: string }> {
+    const allUsers = await this.db
+      .select({ id: users.id, metadata: users.metadata })
+      .from(users)
+      .limit(1000);
+
+    const user = allUsers.find((u) => {
+      const meta = u.metadata as Record<string, unknown> | null;
+      return meta?.emailVerificationToken === token;
+    });
+
+    if (!user)
+      throw new NotFoundException('Invalid or expired verification token');
+
+    const meta = user.metadata as Record<string, unknown>;
+    const expires = meta.emailVerificationExpires as string;
+    if (new Date(expires) < new Date()) {
+      throw new UnauthorizedException('Verification token expired');
+    }
+
+    await this.db
+      .update(users)
+      .set({
+        isVerified: true,
+        verifiedAt: new Date(),
+        metadata: {
+          ...(meta || {}),
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    this.logger.log({
+      message: 'Email verified',
+      userId: user.id,
+      correlationId,
+    });
+
+    return { message: 'Email verified successfully' };
+  }
+
+  async forgotPassword(
+    email: string,
+    correlationId: string,
+  ): Promise<{ message: string; token?: string }> {
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        metadata: users.metadata,
+        deletedAt: users.deletedAt,
+      })
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1);
+
+    // Always return success to prevent email enumeration
+    if (!user || user.deletedAt) {
+      return { message: 'If the email exists, a reset link has been sent' };
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+    await this.db
+      .update(users)
+      .set({
+        metadata: {
+          ...((user.metadata as Record<string, unknown>) || {}),
+          resetPasswordToken: token,
+          resetPasswordExpires: expiresAt.toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    this.logger.log({
+      message: 'Password reset requested',
+      userId: user.id,
+      correlationId,
+    });
+
+    return { message: 'If the email exists, a reset link has been sent', token };
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    correlationId: string,
+  ): Promise<{ message: string }> {
+    const allUsers = await this.db
+      .select({ id: users.id, metadata: users.metadata })
+      .from(users)
+      .limit(1000);
+
+    const user = allUsers.find((u) => {
+      const meta = u.metadata as Record<string, unknown> | null;
+      return meta?.resetPasswordToken === token;
+    });
+
+    if (!user) throw new NotFoundException('Invalid or expired reset token');
+
+    const meta = user.metadata as Record<string, unknown>;
+    const expires = meta.resetPasswordExpires as string;
+    if (new Date(expires) < new Date()) {
+      throw new UnauthorizedException('Reset token expired');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.db
+      .update(users)
+      .set({
+        passwordHash,
+        metadata: {
+          ...(meta || {}),
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    this.logger.log({
+      message: 'Password reset completed',
+      userId: user.id,
+      correlationId,
+    });
+
+    return { message: 'Password reset successfully' };
   }
 }

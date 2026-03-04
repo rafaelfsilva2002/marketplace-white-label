@@ -19,6 +19,9 @@ import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtUser } from '../strategies/jwt.strategy';
@@ -246,5 +249,70 @@ export class AuthController {
       success: true,
       data: result,
     };
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Email verification request',
+      correlationId,
+    });
+
+    const result = await this.authService.verifyEmail(
+      dto.token,
+      correlationId,
+    );
+
+    return { success: true, data: result };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Forgot password request',
+      email: dto.email,
+      correlationId,
+    });
+
+    const result = await this.authService.forgotPassword(
+      dto.email,
+      correlationId,
+    );
+
+    return { success: true, data: { message: result.message } };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Password reset request',
+      correlationId,
+    });
+
+    const result = await this.authService.resetPassword(
+      dto.token,
+      dto.newPassword,
+      correlationId,
+    );
+
+    return { success: true, data: result };
   }
 }
