@@ -61,8 +61,7 @@
 - [x] Frontend — RecommendationsSection (for-you + similar profiles)
 - [x] Frontend — Search page atualizada com modo semantico real
 
-## Fase 3 — Escala
-Status: Em andamento
+## Fase 3 — Escala ✓
 
 ### Concluido
 - [x] 3.1 Crypto Rails — Adaptadores Ethereum/Polygon/Solana
@@ -87,17 +86,56 @@ Status: Em andamento
   - [x] Travel rule for txs > $1000 USD
   - [x] Per-wallet rate limiting
 
-### Pendente
-- [ ] 3.3 Orquestracao com Temporal (workflows longos)
-- [ ] 3.4 Agentes IA com estado persistido
-- [ ] 3.5 A/B testing de modelos e prompts
-- [ ] 3.6 Decision delegation (autonomia gradual)
+- [x] Spec Tasks 33-54 (completados em batch)
+  - [x] Webhooks controller — 10 event handlers + signature verification + rawBody fix + 17 unit tests
+  - [x] Profile management page — edit form + photo upload (dashboard/profile)
+  - [x] AI Metrics service — HTTP/AI/Queue metrics with in-memory buffering
+  - [x] Admin module API — stats, user management, role changes (admin-only)
+  - [x] Admin dashboard pages — stats + moderation queue (separate /admin route)
+  - [x] Notification Worker — BullMQ worker for payment/profile/review/subscription events
+  - [x] OpenAPI/Swagger — auto-generated docs at /api/docs
+  - [x] AdminModule registered in AppModule
+  - [x] vitest.config.ts for API app
+
+- [x] 3.3 Orquestracao de workflows (workflow engine com steps, retries, timeouts)
+  - [x] Schema: workflows, workflow_steps (status tracking, attempt counting)
+  - [x] WorkflowEngineService (registry, step execution, exponential backoff)
+  - [x] WorkflowController (start workflow, get status, get steps) — admin-only
+  - [x] WorkflowsModule registered in AppModule
+  - [x] Moderation workflow (4 steps: analyze, flag, auto-approve/escalate, notify)
+  - [x] Onboarding workflow (5 steps: validate, embed, fraud check, activate, notify)
+  - [x] Outbox events: workflow.started, workflow.completed, workflow.failed
+
+- [x] 3.4 Agentes IA com estado persistido
+  - [x] Schema: ai_agents, agent_conversations, agent_messages, agent_actions
+  - [x] AgentService (CRUD + multi-turn chat + conversation management)
+  - [x] AgentToolsService (5 built-in tools: search, profile, reviews, plan, moderation)
+  - [x] AgentController (CRUD, chat, conversations, decision delegation endpoints)
+  - [x] AgentsModule registered in AppModule
+  - [x] Tool call parsing via regex + AI Gateway follow-up
+  - [x] Token + cost tracking per message
+
+- [x] 3.5 A/B testing de modelos e prompts
+  - [x] Schema: experiments, experiment_variants, experiment_results
+  - [x] ExperimentService (CRUD, variant assignment, result recording, winner detection)
+  - [x] ABRouterService (route requests to variant, override AI Gateway params)
+  - [x] ExperimentController (create, start, end, results endpoints) — admin-only
+  - [x] ExperimentsModule registered in AppModule
+  - [x] Deterministic user assignment via hash(experimentId:userId)
+  - [x] Metrics: latency, cost, quality score, user rating
+
+- [x] 3.6 Decision delegation (autonomia gradual)
+  - [x] DecisionDelegationService (risk classification, auto-execute, approve/reject)
+  - [x] Risk map: LOW (auto), MEDIUM (conditional), HIGH (always human)
+  - [x] Auto-execute thresholds: 95% approval rate + 20 min actions
+  - [x] REST endpoints via AgentController (pending actions, approve, reject, stats)
+  - [x] Outbox events: agent.action.requested/approved/rejected/executed
 
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
   - [x] requirements.md — 12 requirements com user stories e acceptance criteria
   - [x] design.md — arquitetura completa com Mermaid diagrams
-  - [x] tasks.md — 54 atomic tasks
+  - [x] tasks.md — 54 atomic tasks (ALL COMPLETE)
 - [x] Task commands gerados (54 commands)
 - [x] PLAN.md expandido com modelo de dados, APIs, AI Gateway, workers, frontend, testes, monitoramento, roadmap
