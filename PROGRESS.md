@@ -263,6 +263,28 @@
   - [x] Profile not-found.tsx page
   - [x] All TODO mock data comments removed
 
+## Fase 10 — SEO, Performance, Production Deploy ✓
+
+### Concluido
+- [x] 10.1 SEO optimization
+  - [x] Root layout metadata (OpenGraph, Twitter, title template)
+  - [x] sitemap.ts (4 routes, dynamic)
+  - [x] robots.ts (block admin/dashboard/api)
+- [x] 10.2 Database performance indexes (13 new indexes)
+  - [x] Partial indexes: active profiles, pending moderation/outbox
+  - [x] DESC indexes: created_at, views_count, search_score
+  - [x] Composite: profiles city+state
+- [x] 10.3 Crypto/AML/Subscription tests (46 tests)
+  - [x] CryptoWalletService (7), CryptoBalanceService (12)
+  - [x] BlacklistService (11), SubscriptionService (16)
+- [x] 10.4 Production Docker setup
+  - [x] docker-compose.prod.yml (resource limits, healthchecks, network isolation)
+  - [x] nginx.conf (HTTPS, rate limiting, WebSocket, security headers)
+  - [x] .env.production.example template
+  - [x] PostgreSQL tuning, Redis hardening
+
+**Total test count: ~336 tests (unit + controller + E2E)**
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
