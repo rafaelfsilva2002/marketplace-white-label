@@ -26,6 +26,7 @@ export function setupSwagger(app: INestApplication): void {
     .addTag('Workflows', 'Workflow orchestration engine')
     .addTag('Agents', 'AI agents with persistent state')
     .addTag('Experiments', 'A/B testing for AI models and prompts')
+    .addTag('Notifications', 'Real-time WebSocket notifications')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
