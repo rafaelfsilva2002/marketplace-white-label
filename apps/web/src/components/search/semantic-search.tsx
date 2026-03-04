@@ -38,7 +38,7 @@ export function SemanticSearch() {
       setLoading(true);
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/search/semantic`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/search/semantic`,
           {
             method: 'POST',
             body: JSON.stringify({ query: debouncedQuery }),
