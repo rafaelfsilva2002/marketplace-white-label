@@ -192,6 +192,27 @@
   - [x] Notification worker updated with actual SendGrid delivery
   - [x] HTML + text templates in pt-BR
 
+## Fase 6 — Polish & Quality ✓
+
+### Concluido
+- [x] 6.1 API versioning (/api/v1 global prefix)
+  - [x] app.setGlobalPrefix('api/v1', { exclude: ['/health'] })
+  - [x] Swagger server updated with /api/v1
+- [x] 6.2 Professional dashboard
+  - [x] Dashboard layout with sidebar (Perfil, Avaliacoes, Assinatura, Config)
+  - [x] Profile stats: views, rating, status
+  - [x] Quick actions + recent reviews list
+- [x] 6.3 Unit tests (76 tests, 5 core services)
+  - [x] AuthService: register, login, refresh, logout (16 tests)
+  - [x] ProfileService: CRUD, soft delete, pagination (9 tests)
+  - [x] ReviewService: CRUD, duplicate prevention, ownership (13 tests)
+  - [x] WalletService: credit, debit, idempotency, locking (10 tests)
+  - [x] SearchService: FTS, autocomplete, sanitization (12 tests)
+- [x] 6.4 Admin dashboard enhanced
+  - [x] 5 stat cards (users, profiles, moderation, GMV, subscriptions)
+  - [x] Recent users list with role badges
+  - [x] Quick links + refresh button
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
