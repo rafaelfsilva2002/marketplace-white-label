@@ -46,6 +46,8 @@ export default function RegisterPage() {
 
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
+      // Set cookie so Next.js middleware can read the token for SSR
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=86400; SameSite=Lax`;
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');

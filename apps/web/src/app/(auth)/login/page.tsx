@@ -28,7 +28,13 @@ export default function LoginPage() {
 
       localStorage.setItem('accessToken', result.accessToken);
       localStorage.setItem('refreshToken', result.refreshToken);
-      router.push('/');
+      // Set cookie so Next.js middleware can read the token for SSR
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=86400; SameSite=Lax`;
+
+      // Redirect to callbackUrl if present, otherwise home
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get('callbackUrl') || '/';
+      router.push(callbackUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
     } finally {
