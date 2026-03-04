@@ -161,6 +161,37 @@
   - [x] enableShutdownHooks() em main.ts
   - [x] SIGTERM + SIGINT handlers com logging
 
+## Fase 5 — Hardening & UX Polish ✓
+
+### Concluido
+- [x] 5.1 Security headers + compression
+  - [x] @fastify/helmet (X-Frame-Options, HSTS, X-Content-Type-Options)
+  - [x] @fastify/compress (gzip/brotli global compression)
+  - [x] Multi-origin CORS via CORS_ORIGINS env var
+- [x] 5.2 File upload service (S3 presigned URLs)
+  - [x] UploadService (presigned upload/download, delete, public URL)
+  - [x] POST /uploads/presigned (JWT protected)
+  - [x] DELETE /uploads/:key (admin only)
+  - [x] UploadsModule registered in AppModule
+- [x] 5.3 Frontend auth middleware
+  - [x] Next.js middleware.ts (route protection, admin role check)
+  - [x] useAuth hook (JWT decode, setTokens, logout)
+  - [x] Cookie + localStorage dual storage for SSR
+  - [x] Login/register pages updated with cookie sync
+- [x] 5.4 Error boundaries + loading states
+  - [x] error.tsx: root, admin, marketplace, auth (pt-BR messages)
+  - [x] loading.tsx: root, admin, marketplace, auth (spinner)
+  - [x] not-found.tsx (404 page)
+- [x] 5.5 WebSocket notification gateway
+  - [x] NotificationGateway (Socket.IO, /notifications namespace)
+  - [x] User connection tracking + room-based messaging
+  - [x] sendToUser, broadcast, getConnectedUsers methods
+- [x] 5.6 Email notification delivery
+  - [x] EmailService (SendGrid with graceful fallback to log)
+  - [x] Typed methods: payment, profile, review, subscription
+  - [x] Notification worker updated with actual SendGrid delivery
+  - [x] HTML + text templates in pt-BR
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
