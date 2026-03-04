@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
@@ -13,6 +14,7 @@ import { DATABASE_TOKEN } from '@/config/database.config';
 import { TokenService, TokenPair } from './token.service';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -231,5 +233,133 @@ export class AuthService {
       isVerified: user.isVerified,
       createdAt: user.createdAt,
     };
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+    correlationId: string,
+  ): Promise<AuthenticatedUser> {
+    if (dto.email) {
+      const [existing] = await this.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, dto.email.toLowerCase()))
+        .limit(1);
+
+      if (existing && existing.id !== userId) {
+        throw new ConflictException('Email already in use');
+      }
+
+      dto.email = dto.email.toLowerCase();
+    }
+
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.email !== undefined) updateData.email = dto.email;
+    if (dto.phone !== undefined) updateData.phone = dto.phone;
+
+    const [updated] = await this.db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        isVerified: users.isVerified,
+        createdAt: users.createdAt,
+      });
+
+    if (!updated) {
+      throw new NotFoundException('User not found');
+    }
+
+    this.logger.log({
+      message: 'User profile updated',
+      userId,
+      correlationId,
+    });
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      role: updated.role as UserRole,
+      isVerified: updated.isVerified,
+      createdAt: updated.createdAt,
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    correlationId: string,
+  ): Promise<{ message: string }> {
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        passwordHash: users.passwordHash,
+        deletedAt: users.deletedAt,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    await this.db
+      .update(users)
+      .set({ passwordHash: newHash, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    this.logger.log({
+      message: 'User password changed',
+      userId,
+      correlationId,
+    });
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async deleteAccount(
+    userId: string,
+    correlationId: string,
+  ): Promise<{ message: string }> {
+    const [user] = await this.db
+      .select({ id: users.id, deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.db
+      .update(users)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    await this.tokenService.revokeAllUserTokens(userId, correlationId);
+
+    this.logger.log({
+      message: 'User account deleted (soft delete)',
+      userId,
+      correlationId,
+    });
+
+    return { message: 'Account deleted' };
   }
 }

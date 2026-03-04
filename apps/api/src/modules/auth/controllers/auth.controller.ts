@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Logger,
+  Patch,
   Post,
   UseGuards,
   Headers,
@@ -15,6 +17,8 @@ import { AuthService, AuthenticatedUser } from '../services/auth.service';
 import { TokenPair } from '../services/token.service';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtUser } from '../strategies/jwt.strategy';
@@ -158,6 +162,89 @@ export class AuthController {
     return {
       success: true,
       data: profile,
+    };
+  }
+
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @CurrentUser() user: JwtUser,
+    @Body() dto: UpdateProfileDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<AuthenticatedUser>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Profile update request',
+      userId: user.id,
+      correlationId,
+    });
+
+    const updated = await this.authService.updateProfile(
+      user.id,
+      dto,
+      correlationId,
+    );
+
+    return {
+      success: true,
+      data: updated,
+    };
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @CurrentUser() user: JwtUser,
+    @Body() dto: ChangePasswordDto,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Password change request',
+      userId: user.id,
+      correlationId,
+    });
+
+    const result = await this.authService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+      correlationId,
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async deleteAccount(
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const correlationId = headerCorrelationId ?? uuidv4();
+
+    this.logger.log({
+      message: 'Account deletion request',
+      userId: user.id,
+      correlationId,
+    });
+
+    const result = await this.authService.deleteAccount(
+      user.id,
+      correlationId,
+    );
+
+    return {
+      success: true,
+      data: result,
     };
   }
 }
