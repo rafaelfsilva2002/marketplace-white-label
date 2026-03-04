@@ -285,6 +285,30 @@
 
 **Total test count: ~336 tests (unit + controller + E2E)**
 
+## Fase 12 — Missing PLAN.md Endpoints ✓
+
+### Concluido
+- [x] 12.1 Auth email endpoints
+  - [x] POST /auth/verify-email (token-based email verification)
+  - [x] POST /auth/forgot-password (reset token, anti-enumeration)
+  - [x] POST /auth/reset-password (token validation, password hash update)
+  - [x] DTOs: VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto
+- [x] 12.2 Profile photo delete
+  - [x] DELETE /profiles/:id/photos/:photoIndex (ownership validation)
+- [x] 12.3 Moderation reports system
+  - [x] reports schema (pgTable with status enum)
+  - [x] POST /moderation/reports (any authenticated user)
+  - [x] GET /moderation/reports (moderator/admin, paginated)
+  - [x] POST /moderation/reports/:id/resolve (moderator/admin)
+  - [x] DTOs: CreateReportDto, ResolveReportDto
+- [x] 12.4 Admin audit-logs + feature profile
+  - [x] GET /admin/audit-logs (paginated, filterable by userId/action/entityType)
+  - [x] POST /admin/profiles/:id/feature (toggle featured status)
+- [x] 12.5 K6 load tests
+  - [x] k6/scripts/search-test.js (FTS + semantic, <500ms p95)
+  - [x] k6/scripts/auth-test.js (register/login/me, <200ms p95)
+  - [x] k6/scripts/profiles-test.js (list + health, <200ms p95)
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
