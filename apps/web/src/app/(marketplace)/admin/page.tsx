@@ -33,7 +33,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) return;
 
       try {
@@ -63,7 +63,7 @@ export default function AdminPage() {
   }, []);
 
   async function handleModeration(id: string, action: 'approve' | 'reject') {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     await fetch(`${API_URL}/moderation/${action}`, {
       method: 'POST',
       headers: {
@@ -76,7 +76,7 @@ export default function AdminPage() {
   }
 
   async function handleAction(id: string, action: 'approve' | 'reject') {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     await fetch(`${API_URL}/agents/actions/${id}/${action}`, {
       method: 'POST',
       headers: {

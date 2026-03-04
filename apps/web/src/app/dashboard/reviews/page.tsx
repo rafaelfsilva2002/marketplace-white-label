@@ -93,7 +93,7 @@ export default function ReviewsPage() {
   // -------------------------------------------------------------------------
 
   const fetchProfileId = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return null;
 
     const profile = await api<{ id: string }>('/profiles/me', { token });
@@ -102,7 +102,7 @@ export default function ReviewsPage() {
 
   const fetchReviews = useCallback(
     async (pid: string, pageNum: number, append = false) => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) return;
 
       if (append) {

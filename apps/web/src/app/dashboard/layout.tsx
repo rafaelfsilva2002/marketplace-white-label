@@ -33,7 +33,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       router.replace('/login');
       return;
@@ -42,8 +42,9 @@ export default function DashboardLayout({
   }, [router]);
 
   function handleLogout() {
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    document.cookie = 'accessToken=; path=/; max-age=0';
     router.replace('/login');
   }
 

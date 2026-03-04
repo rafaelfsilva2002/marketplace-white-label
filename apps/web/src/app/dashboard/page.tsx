@@ -87,7 +87,7 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   const fetchData = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       setLoading(false);
       return;

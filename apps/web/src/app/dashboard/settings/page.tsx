@@ -63,7 +63,7 @@ export default function SettingsPage() {
   // -------------------------------------------------------------------------
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       setProfileLoading(false);
       return;
@@ -98,7 +98,7 @@ export default function SettingsPage() {
     setProfileMessage('');
     setProfileError('');
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return;
 
     setProfileSaving(true);
@@ -140,7 +140,7 @@ export default function SettingsPage() {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return;
 
     setPasswordSaving(true);
@@ -184,7 +184,7 @@ export default function SettingsPage() {
     );
     if (!doubleConfirm) return;
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return;
 
     setDeleteLoading(true);
@@ -194,7 +194,7 @@ export default function SettingsPage() {
         method: 'DELETE',
         token,
       });
-      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       window.location.href = '/';
     } catch (err) {

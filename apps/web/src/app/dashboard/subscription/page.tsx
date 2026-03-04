@@ -136,7 +136,7 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   const fetchSubscription = useCallback(async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
       setLoading(false);
       return;
@@ -164,7 +164,7 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   async function handleUpgrade(planId: string) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return;
 
     setActionLoading(planId);
@@ -194,7 +194,7 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   async function handleCancel() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token || !subscription) return;
 
     const confirmed = window.confirm(

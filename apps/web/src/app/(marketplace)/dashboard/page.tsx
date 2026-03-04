@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) return;
 
       try {

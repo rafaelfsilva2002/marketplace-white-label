@@ -29,10 +29,10 @@ export function RecommendationsSection({ profileId, title }: RecommendationsSect
   useEffect(() => {
     async function fetchRecommendations() {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
         const url = profileId
-          ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/recommendations/similar/${profileId}`
-          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/recommendations/for-you`;
+          ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/similar/${profileId}`
+          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/for-you`;
 
         const response = await fetch(url, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},

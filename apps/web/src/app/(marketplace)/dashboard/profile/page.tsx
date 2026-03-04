@@ -147,7 +147,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       if (!token) {
         setLoading(false);
         return;
@@ -230,7 +230,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token || !profile) return;
 
     const maxSizeMB = 10;
@@ -302,7 +302,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     if (!token || !profile) return;
 
     setSaving(true);
