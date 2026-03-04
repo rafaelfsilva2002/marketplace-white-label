@@ -98,6 +98,40 @@ export class ProfileController {
     await this.profileService.softDelete(id, user.id, req.correlationId);
   }
 
+  @Post(':id/photos')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async addPhotos(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { photos: string[] },
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string; photos: string[] }>> {
+    const result = await this.profileService.addPhotos(
+      id,
+      body.photos,
+      user.id,
+      headerCorrelationId,
+    );
+    return { success: true, data: result };
+  }
+
+  @Post(':id/verify')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async requestVerification(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    const result = await this.profileService.requestVerification(
+      id,
+      user.id,
+      headerCorrelationId,
+    );
+    return { success: true, data: result };
+  }
+
   @Delete(':id/photos/:photoIndex')
   @UseGuards(JwtAuthGuard)
   async removePhoto(

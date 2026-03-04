@@ -300,4 +300,81 @@ export class ProfileService {
 
     return { message: 'Photo removed successfully', photos: updatedPhotos };
   }
+
+  async addPhotos(
+    id: string,
+    photoUrls: string[],
+    userId: string,
+    correlationId?: string,
+  ): Promise<{ message: string; photos: string[] }> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const profile = await this.findById(id);
+
+    if (profile.userId !== userId) {
+      throw new ForbiddenException('You can only add photos to your own profile');
+    }
+
+    const updatedPhotos = [...profile.photos, ...photoUrls];
+
+    await this.db
+      .update(profiles)
+      .set({ photos: updatedPhotos, updatedAt: new Date() })
+      .where(eq(profiles.id, id));
+
+    await this.auditService.record({
+      userId,
+      action: 'profile.photos_added',
+      entityType: 'profile',
+      entityId: id,
+      oldValue: { photos: profile.photos },
+      newValue: { photos: updatedPhotos },
+      correlationId: corrId,
+    });
+
+    return { message: 'Photos added successfully', photos: updatedPhotos };
+  }
+
+  async requestVerification(
+    id: string,
+    userId: string,
+    correlationId?: string,
+  ): Promise<{ message: string }> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const profile = await this.findById(id);
+
+    if (profile.userId !== userId) {
+      throw new ForbiddenException('You can only request verification for your own profile');
+    }
+
+    if (profile.isVerified) {
+      throw new ConflictException('Profile is already verified');
+    }
+
+    await this.outboxService.writeEvent(this.db as any, {
+      eventType: 'marketplace.profile.verification_requested',
+      aggregateType: 'profile',
+      aggregateId: id,
+      payload: { profileId: id, userId },
+      correlationId: corrId,
+    });
+
+    await this.auditService.record({
+      userId,
+      action: 'profile.verification_requested',
+      entityType: 'profile',
+      entityId: id,
+      correlationId: corrId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      'Profile verification requested',
+      { profileId: id, correlationId: corrId },
+      'ProfileService',
+    );
+
+    return { message: 'Verification request submitted' };
+  }
 }
