@@ -85,7 +85,7 @@ export const cryptoTransactions = pgTable(
     amlScreeningId: uuid('aml_screening_id'),
     amlStatus: text('aml_status').notNull().default('pending_aml'),
     idempotencyKey: text('idempotency_key').notNull(),
-    correlationId: uuid('correlation_id'),
+    correlationId: text('correlation_id'),
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -143,7 +143,7 @@ export const cryptoLedger = pgTable(
     referenceType: text('reference_type').notNull(),
     referenceId: uuid('reference_id').notNull(),
     idempotencyKey: text('idempotency_key').notNull().unique(),
-    correlationId: uuid('correlation_id'),
+    correlationId: text('correlation_id'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [

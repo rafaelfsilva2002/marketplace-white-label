@@ -2,7 +2,30 @@
   "mcpServers": {
     "spec-workflow": {
       "command": "spec-workflow-mcp",
-      "args": ["--project-dir", "C:/Users/manod/Downloads/marketplace white label"]
+      "args": [
+        "--project-dir",
+        "C:/Users/manod/Downloads/marketplace FTM"
+      ]
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(pnpm *)",
+      "Bash(cat *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(rm *)",
+      "Bash(echo *)",
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)"
+    ],
+    "deny": []
   }
 }

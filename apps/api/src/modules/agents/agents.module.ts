@@ -22,11 +22,7 @@ import { AgentController } from './controllers/agent.controller';
       useFactory: (db: Database) => new AuditService(db),
       inject: [DATABASE_TOKEN],
     },
-    {
-      provide: OutboxService,
-      useFactory: (db: Database) => new OutboxService(db),
-      inject: [DATABASE_TOKEN],
-    },
+    OutboxService,
     AgentToolsService,
     AgentService,
     DecisionDelegationService,

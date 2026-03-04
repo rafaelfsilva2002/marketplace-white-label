@@ -279,14 +279,14 @@ async function processNotificationJob(
 
   // Channel 3 — WebSocket push via NestJS API
   const apiUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001';
-  if (data.userId) {
+  if (userId) {
     try {
       await fetch(`${apiUrl}/api/v1/notifications/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: data.userId,
-          event: data.type,
+          userId,
+          event: type,
           data: { title: payload.title, body: payload.body },
         }),
       });

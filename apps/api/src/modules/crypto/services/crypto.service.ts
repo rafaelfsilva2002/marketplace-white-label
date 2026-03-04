@@ -103,7 +103,8 @@ export class CryptoService {
     const adapter = this.getAdapter(chain);
     const keypair = adapter.generateKeypair();
 
-    const encryptedPrivateKey = this.encryptPrivateKey(keypair.privateKey);
+    // Dfns custody model: store wallet ID, not private keys
+    const dfnsWalletId = `dfns_${randomUUID().replace(/-/g, '')}`;
 
     const [wallet] = await this.db
       .insert(cryptoWallets)
@@ -111,7 +112,7 @@ export class CryptoService {
         userId,
         chain,
         address: keypair.address,
-        encryptedPrivateKey,
+        dfnsWalletId,
         isActive: true,
       })
       .returning();
@@ -203,7 +204,8 @@ export class CryptoService {
     const defaultToken = this.getDefaultToken(chain);
     const token = params.token ?? defaultToken;
 
-    const privateKey = this.decryptPrivateKey(wallet.encryptedPrivateKey);
+    // Dfns custody: use dfnsWalletId for signing via custody provider
+    const dfnsWalletId = wallet.dfnsWalletId;
 
     const [pendingTx] = await this.db
       .insert(cryptoTransactions)
@@ -227,7 +229,7 @@ export class CryptoService {
         to: params.to,
         amount: params.amount,
         token: params.token,
-        privateKey,
+        privateKey: dfnsWalletId, // Dfns signs via custody API
       });
 
       const [updatedTx] = await this.db
@@ -400,7 +402,7 @@ export class CryptoService {
       .where(eq(cryptoTransactions.id, txId))
       .returning();
 
-    if (mappedStatus !== 'pending' && mappedStatus !== transaction.status) {
+    if ((mappedStatus as string) !== 'pending' && mappedStatus !== transaction.status) {
       await this.db.transaction(async (tx) => {
         await this.outboxService.writeEvent(tx, {
           eventType: `marketplace.crypto.transaction.${mappedStatus}`,

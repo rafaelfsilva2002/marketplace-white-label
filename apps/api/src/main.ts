@@ -19,10 +19,12 @@ async function bootstrap() {
 
   // Security headers (Helmet) + response compression
   const fastifyInstance = app.getHttpAdapter().getInstance();
-  await fastifyInstance.register(import('@fastify/helmet'), {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await fastifyInstance.register((await import('@fastify/helmet')).default as any, {
     contentSecurityPolicy: false, // Let frontend handle CSP
   });
-  await fastifyInstance.register(import('@fastify/compress'), { global: true });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await fastifyInstance.register((await import('@fastify/compress')).default as any, { global: true });
 
   // Enable graceful shutdown hooks (listens for SIGTERM, SIGINT, etc.)
   app.enableShutdownHooks();

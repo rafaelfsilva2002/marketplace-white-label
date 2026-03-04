@@ -12,9 +12,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { DATABASE_TOKEN } from '@/config/database.config';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/modules/auth/guards/roles.guard';
-import { Roles } from '@/modules/auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
 import { ReviewQueueService } from '../services/review-queue.service';
 import { SarService } from '../services/sar.service';
 import { BlacklistService } from '../services/blacklist.service';

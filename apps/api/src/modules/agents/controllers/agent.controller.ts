@@ -128,7 +128,7 @@ export class AgentController {
   async getPendingActions(
     @Query('agentId') agentId?: string,
   ): Promise<ApiResponse<unknown>> {
-    const actions = await this.decisionDelegation.getPendingActions(agentId);
+    const actions = await this.decisionDelegation.getPendingActions(agentId ? { agentId } : undefined);
     return { success: true, data: actions };
   }
 

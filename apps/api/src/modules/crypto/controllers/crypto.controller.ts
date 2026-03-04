@@ -1,8 +1,8 @@
 import {
   Controller, Post, Get, Body, Param, Query, UseGuards, Request,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
-import { RolesGuard } from '@/modules/auth/guards/roles.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import { CryptoWalletService } from '../services/crypto-wallet.service';
 import { CryptoBalanceService } from '../services/crypto-balance.service';
 import { CryptoPaymentService } from '../services/crypto-payment.service';

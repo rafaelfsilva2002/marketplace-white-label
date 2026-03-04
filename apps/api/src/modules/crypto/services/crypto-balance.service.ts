@@ -9,12 +9,12 @@ type Token = 'ETH' | 'MATIC' | 'SOL' | 'USDT' | 'USDC';
 
 interface CryptoOperationInput {
   userId: string;
-  token: Token;
+  token: string;
   chain: Chain;
   amount: string;
   idempotencyKey: string;
-  referenceType?: string;
-  referenceId?: string;
+  referenceType: string;
+  referenceId: string;
   correlationId?: string;
 }
 

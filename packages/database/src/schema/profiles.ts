@@ -24,8 +24,9 @@ const vector = customType<{
   toDriver(value: number[]): string {
     return `[${value.join(',')}]`;
   },
-  fromDriver(value: string): number[] {
-    return value
+  fromDriver(value: unknown): number[] {
+    const str = String(value);
+    return str
       .replace('[', '')
       .replace(']', '')
       .split(',')
