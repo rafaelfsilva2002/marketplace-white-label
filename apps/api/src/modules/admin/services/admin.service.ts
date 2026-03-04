@@ -12,6 +12,7 @@ import {
   subscriptions,
   ledgerEntries,
   moderationQueue,
+  auditLogs,
 } from '@marketplace/database';
 import { DATABASE_TOKEN } from '@/config/database.config';
 import { AuditService } from '@/modules/audit/audit.service';
@@ -403,5 +404,93 @@ export class AdminService {
       updatedAt: updated.updatedAt,
       deletedAt: updated.deletedAt,
     };
+  }
+
+  async getAuditLogs(options: {
+    page?: number;
+    limit?: number;
+    userId?: string;
+    action?: string;
+    entityType?: string;
+  }): Promise<{ logs: any[]; total: number; page: number; limit: number }> {
+    const page = options.page ?? 1;
+    const limit = Math.min(options.limit ?? 50, 100);
+    const offset = (page - 1) * limit;
+
+    const conditions: any[] = [];
+    if (options.userId) conditions.push(eq(auditLogs.userId, options.userId));
+    if (options.action) conditions.push(eq(auditLogs.action, options.action));
+    if (options.entityType) conditions.push(eq(auditLogs.entityType, options.entityType));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [logs, countResult] = await Promise.all([
+      this.db
+        .select()
+        .from(auditLogs)
+        .where(whereClause)
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(limit)
+        .offset(offset),
+      this.db
+        .select({ count: count() })
+        .from(auditLogs)
+        .where(whereClause),
+    ]);
+
+    this.logger.logWithData(
+      'info',
+      'Audit logs fetched',
+      { total: Number(countResult[0]?.count ?? 0), page, limit },
+      'AdminService',
+    );
+
+    return { logs, total: Number(countResult[0]?.count ?? 0), page, limit };
+  }
+
+  async featureProfile(
+    profileId: string,
+    featured: boolean,
+    adminId: string,
+    correlationId: string,
+  ): Promise<{ message: string }> {
+    const [profile] = await this.db
+      .select({ id: profiles.id, searchScore: profiles.searchScore })
+      .from(profiles)
+      .where(eq(profiles.id, profileId))
+      .limit(1);
+
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const newSearchScore = featured ? 100 : 0;
+
+    await this.db
+      .update(profiles)
+      .set({
+        searchScore: newSearchScore,
+        updatedAt: new Date(),
+      })
+      .where(eq(profiles.id, profileId));
+
+    await this.auditService.record({
+      userId: adminId,
+      action: featured ? 'profile.featured' : 'profile.unfeatured',
+      entityType: 'profile',
+      entityId: profileId,
+      oldValue: { searchScore: profile.searchScore },
+      newValue: { searchScore: newSearchScore, featured },
+      correlationId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      featured ? 'Profile featured' : 'Profile unfeatured',
+      { profileId, adminId, correlationId },
+      'AdminService',
+    );
+
+    return { message: featured ? 'Profile featured successfully' : 'Profile unfeatured' };
   }
 }
