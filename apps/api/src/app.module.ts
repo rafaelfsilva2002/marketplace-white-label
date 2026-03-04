@@ -17,7 +17,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { HealthModule } from './modules/health/health.module';
     WorkflowsModule,
     AgentsModule,
     ExperimentsModule,
+    NotificationsModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}
