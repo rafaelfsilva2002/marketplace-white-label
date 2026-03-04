@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { validate } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { SearchModule } from './modules/search/search.module';
@@ -16,13 +17,16 @@ import { AdminModule } from './modules/admin/admin.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      validate,
     }),
+    HealthModule,
     AuthModule,
     ProfilesModule,
     SearchModule,
