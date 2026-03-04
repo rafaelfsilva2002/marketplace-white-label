@@ -27,6 +27,7 @@ export function setupSwagger(app: INestApplication): void {
     .addTag('Agents', 'AI agents with persistent state')
     .addTag('Experiments', 'A/B testing for AI models and prompts')
     .addTag('Notifications', 'Real-time WebSocket notifications')
+    .addServer('/api/v1')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

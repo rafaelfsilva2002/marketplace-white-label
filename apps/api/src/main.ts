@@ -48,6 +48,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['/health'],
+  });
+
   setupSwagger(app);
 
   const port = process.env.PORT || 3001;
