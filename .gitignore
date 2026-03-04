@@ -12,6 +12,8 @@ out/
 .env
 .env.local
 .env.*.local
+.env.production
+infra/docker/.env.production
 
 # IDE
 .vscode/
@@ -35,4 +37,5 @@ coverage/
 
 # Docker
 docker-compose.override.yml
+infra/docker/certs/
 apps/api/tsconfig.tsbuildinfo
