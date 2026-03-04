@@ -229,6 +229,28 @@
   - [x] ModerationService: queue, approve/reject (22 tests)
   - [x] RecommendationService: embeddings, fallback (14 tests)
 
+## Fase 8 — Observability & E2E ✓
+
+### Concluido
+- [x] 8.1 Prometheus metrics endpoint
+  - [x] GET /metrics with prom-client (excluded from /api/v1 prefix)
+  - [x] Custom counters: http_requests, http_duration, ai_gateway, queue_jobs
+  - [x] Global HttpMetricsInterceptor for auto-instrumentation
+  - [x] MetricsModule (global) registered in AppModule
+- [x] 8.2 Admin user management page (/admin/usuarios)
+  - [x] Users table with pagination + search filter
+  - [x] Role change dropdown, verify toggle, deactivate
+  - [x] Toast notifications for feedback
+- [x] 8.3 Playwright E2E setup
+  - [x] playwright.config.ts with CI-aware settings
+  - [x] 6 smoke tests + 3 auth flow tests
+- [x] 8.4 Controller tests (46 tests)
+  - [x] AuthController: register, login, refresh, logout, me (18 tests)
+  - [x] ProfileController: CRUD, views, pagination (20 tests)
+  - [x] HealthController: DB + Redis checks, failures (8 tests)
+
+**Total test count: 164 + 71 + 46 + 9 E2E = 290 tests**
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
