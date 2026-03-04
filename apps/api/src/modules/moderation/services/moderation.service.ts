@@ -4,7 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { eq, and, sql, desc, count } from 'drizzle-orm';
-import { profiles, reviews, type Database } from '@marketplace/database';
+import { profiles, reviews, reports, type Database } from '@marketplace/database';
+import { CreateReportDto } from '../dto/create-report.dto';
+import { ResolveReportDto } from '../dto/resolve-report.dto';
 import { DATABASE_TOKEN } from '@/config/database.config';
 import { AuditService } from '@/modules/audit/audit.service';
 import { StructuredLogger } from '@/common/logger/structured.logger';
@@ -333,5 +335,136 @@ export class ModerationService {
       return this.rejectProfile(queueItemId, moderatorId, reason, correlationId);
     }
     return this.rejectReview(queueItemId, moderatorId, reason, correlationId);
+  }
+
+  async createReport(
+    reporterId: string,
+    dto: CreateReportDto,
+    correlationId?: string,
+  ): Promise<typeof reports.$inferSelect> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const [report] = await this.db
+      .insert(reports)
+      .values({
+        reporterId,
+        entityType: dto.entityType,
+        entityId: dto.entityId,
+        reason: dto.reason,
+        description: dto.description,
+      })
+      .returning();
+
+    await this.auditService.record({
+      userId: reporterId,
+      action: 'report.created',
+      entityType: 'report',
+      entityId: report.id,
+      newValue: report as unknown as Record<string, unknown>,
+      correlationId: corrId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      'Report created',
+      {
+        reportId: report.id,
+        reporterId,
+        entityType: dto.entityType,
+        entityId: dto.entityId,
+        correlationId: corrId,
+      },
+      'ModerationService',
+    );
+
+    return report;
+  }
+
+  async getReports(
+    status?: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<PaginatedResult<typeof reports.$inferSelect>> {
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (status) {
+      conditions.push(eq(reports.status, status as 'pending' | 'resolved' | 'dismissed'));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult] = await this.db
+      .select({ total: count() })
+      .from(reports)
+      .where(whereClause);
+
+    const total = totalResult?.total ?? 0;
+
+    const data = await this.db
+      .select()
+      .from(reports)
+      .where(whereClause)
+      .orderBy(desc(reports.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async resolveReport(
+    reportId: string,
+    moderatorId: string,
+    dto: ResolveReportDto,
+    correlationId?: string,
+  ): Promise<typeof reports.$inferSelect> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const [existing] = await this.db
+      .select()
+      .from(reports)
+      .where(eq(reports.id, reportId))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException(`Report with id ${reportId} not found`);
+    }
+
+    const [updated] = await this.db
+      .update(reports)
+      .set({
+        status: dto.status as 'resolved' | 'dismissed',
+        resolvedBy: moderatorId,
+        resolvedAt: new Date(),
+        resolution: dto.resolution,
+        updatedAt: new Date(),
+      })
+      .where(eq(reports.id, reportId))
+      .returning();
+
+    await this.auditService.record({
+      userId: moderatorId,
+      action: `report.${dto.status}`,
+      entityType: 'report',
+      entityId: reportId,
+      oldValue: { status: existing.status },
+      newValue: { status: dto.status, resolvedBy: moderatorId, resolution: dto.resolution },
+      correlationId: corrId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      `Report ${dto.status}`,
+      { reportId, moderatorId, status: dto.status, correlationId: corrId },
+      'ModerationService',
+    );
+
+    return updated;
   }
 }
