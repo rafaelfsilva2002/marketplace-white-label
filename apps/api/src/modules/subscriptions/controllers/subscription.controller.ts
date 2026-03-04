@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -15,6 +17,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtUser } from '@/modules/auth/strategies/jwt.strategy';
 import { SubscriptionService } from '../services/subscription.service';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
+import { UpgradeSubscriptionDto } from '../dto/upgrade-subscription.dto';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,6 +25,62 @@ export class SubscriptionController {
   constructor(
     private readonly subscriptionService: SubscriptionService,
   ) {}
+
+  // -------------------------------------------------------------------------
+  // Endpoints used by the frontend subscription page
+  // -------------------------------------------------------------------------
+
+  @Get('current')
+  async getCurrent(@CurrentUser() user: JwtUser) {
+    const subscription =
+      await this.subscriptionService.getActiveSubscription(user.id);
+
+    if (!subscription) {
+      return null;
+    }
+
+    return subscription;
+  }
+
+  @Post('upgrade')
+  async upgrade(
+    @CurrentUser() user: JwtUser,
+    @Body() dto: UpgradeSubscriptionDto,
+  ) {
+    const active =
+      await this.subscriptionService.getActiveSubscription(user.id);
+
+    if (!active) {
+      // No active subscription — create one with the requested plan
+      return this.subscriptionService.createSubscription(
+        user.id,
+        user.email,
+        dto.planId,
+      );
+    }
+
+    return this.subscriptionService.upgradeOrDowngrade(
+      active.id,
+      user.id,
+      dto.planId,
+    );
+  }
+
+  @Post('cancel')
+  async cancelCurrent(@CurrentUser() user: JwtUser) {
+    const active =
+      await this.subscriptionService.getActiveSubscription(user.id);
+
+    if (!active) {
+      throw new NotFoundException('No active subscription to cancel');
+    }
+
+    return this.subscriptionService.cancelSubscription(active.id, user.id);
+  }
+
+  // -------------------------------------------------------------------------
+  // CRUD endpoints (by subscription ID)
+  // -------------------------------------------------------------------------
 
   @Post()
   async create(
@@ -57,7 +116,7 @@ export class SubscriptionController {
   }
 
   @Delete(':id')
-  async cancel(
+  async cancelById(
     @CurrentUser() user: JwtUser,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
