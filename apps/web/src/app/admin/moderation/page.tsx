@@ -99,7 +99,7 @@ export default function ModerationPage() {
     setActionLoading((prev) => ({ ...prev, [id]: true }));
 
     try {
-      await api(`/moderation/${id}/${action}`, {
+      await api(`/moderation/queue/${id}/${action}`, {
         method: 'POST',
         token,
       });
