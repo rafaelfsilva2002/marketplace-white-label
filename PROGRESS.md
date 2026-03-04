@@ -131,6 +131,36 @@
   - [x] REST endpoints via AgentController (pending actions, approve, reject, stats)
   - [x] Outbox events: agent.action.requested/approved/rejected/executed
 
+## Fase 4 — Production Readiness ✓
+
+### Concluido
+- [x] 4.1 Health check endpoint (GET /health — DB + Redis ping)
+  - [x] HealthController com checks de banco e cache
+  - [x] HealthModule registered em AppModule (primeiro import)
+- [x] 4.2 Global exception filter (HttpExceptionFilter)
+  - [x] Structured error responses com correlationId
+  - [x] Logging de erros com stack trace
+  - [x] Registrado globalmente em main.ts
+- [x] 4.3 Environment validation (Zod schema)
+  - [x] Schema completo: DATABASE_URL, REDIS_URL, JWT_SECRET, Stripe, AI providers
+  - [x] Integrado com ConfigModule.forRoot({ validate })
+- [x] 4.4 Dockerfiles (multi-stage builds)
+  - [x] apps/api/Dockerfile — NestJS API
+  - [x] apps/web/Dockerfile — Next.js standalone
+  - [x] apps/workers/Dockerfile — BullMQ workers
+  - [x] docker-compose.yml atualizado com servicos api, web, workers
+- [x] 4.5 GitHub Actions CI pipeline
+  - [x] Lint + typecheck job
+  - [x] Test job com PostgreSQL + Redis services
+  - [x] Build job (all apps)
+- [x] 4.6 Database seed data
+  - [x] 5 users (admin, moderator, 2 professionals, 1 user)
+  - [x] 2 profiles, 4 reviews, 2 subscriptions
+  - [x] Script: packages/database/src/seed/seed.ts
+- [x] 4.7 Graceful shutdown
+  - [x] enableShutdownHooks() em main.ts
+  - [x] SIGTERM + SIGINT handlers com logging
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
