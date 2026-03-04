@@ -12,6 +12,10 @@ import { RecommendationsModule } from './modules/recommendations/recommendations
 import { PricingModule } from './modules/pricing/pricing.module';
 import { CryptoModule } from './modules/crypto/crypto.module';
 import { AmlModule } from './modules/aml/aml.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
+import { AgentsModule } from './modules/agents/agents.module';
+import { ExperimentsModule } from './modules/experiments/experiments.module';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { AmlModule } from './modules/aml/aml.module';
     PricingModule,
     CryptoModule,
     AmlModule,
+    AdminModule,
+    WorkflowsModule,
+    AgentsModule,
+    ExperimentsModule,
   ],
 })
 export class AppModule {}
