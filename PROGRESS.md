@@ -251,6 +251,18 @@
 
 **Total test count: 164 + 71 + 46 + 9 E2E = 290 tests**
 
+## Fase 9 — Bug Fixes & API Integration ✓
+
+### Concluido
+- [x] 9.1 Admin verify user endpoint (PUT /admin/users/:id/verify)
+  - [x] VerifyUserDto, AdminService.verifyUser, audit log
+- [x] 9.2 Fix moderation route mismatch (/moderation/queue/{id}/{action})
+- [x] 9.3 Replace mock data with real API calls
+  - [x] Homepage: GET /profiles?limit=6 for featured profiles
+  - [x] Profile detail: GET /profiles/:id + GET /reviews/profile/:id
+  - [x] Profile not-found.tsx page
+  - [x] All TODO mock data comments removed
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
