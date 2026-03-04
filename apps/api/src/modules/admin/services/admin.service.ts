@@ -346,4 +346,62 @@ export class AdminService {
 
     return { success: true, userId };
   }
+
+  async verifyUser(
+    userId: string,
+    verified: boolean,
+    adminId: string,
+    correlationId?: string,
+  ): Promise<UserListItem> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+
+    const oldVerified = user.isVerified;
+
+    const [updated] = await this.db
+      .update(users)
+      .set({
+        isVerified: verified,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    await this.auditService.record({
+      userId: adminId,
+      action: 'user.verification.updated',
+      entityType: 'user',
+      entityId: userId,
+      oldValue: { isVerified: oldVerified },
+      newValue: { isVerified: verified },
+      correlationId: corrId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      'User verification updated',
+      { userId, oldVerified, newVerified: verified, adminId, correlationId: corrId },
+      'AdminService',
+    );
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      role: updated.role,
+      isVerified: updated.isVerified,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      deletedAt: updated.deletedAt,
+    };
+  }
 }

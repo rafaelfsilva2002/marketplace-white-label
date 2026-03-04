@@ -20,6 +20,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { UserRole } from '@marketplace/shared';
 import { JwtUser } from '@/modules/auth/strategies/jwt.strategy';
 import { AdminService } from '../services/admin.service';
+import { VerifyUserDto } from '../dto/verify-user.dto';
 
 class UpdateRoleDto {
   role!: string;
@@ -57,6 +58,15 @@ export class AdminController {
     @CurrentUser() admin: JwtUser,
   ) {
     return this.adminService.updateUserRole(id, dto.role, admin.id);
+  }
+
+  @Put('users/:id/verify')
+  async verifyUser(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: VerifyUserDto,
+    @CurrentUser() admin: JwtUser,
+  ) {
+    return this.adminService.verifyUser(id, dto.verified, admin.id);
   }
 
   @Delete('users/:id')
