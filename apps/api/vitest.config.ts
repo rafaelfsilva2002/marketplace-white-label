@@ -22,6 +22,10 @@ export default defineConfig({
         __dirname,
         '../../packages/ai-gateway/src',
       ),
+      'drizzle-orm': path.resolve(
+        __dirname,
+        '../../packages/database/node_modules/drizzle-orm',
+      ),
     },
   },
 });
