@@ -88,6 +88,15 @@ export default function WorkflowsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    api<{ data: Workflow[] }>('/workflows', { token })
+      .then((res) => setWorkflows(res.data))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
   return (
     <div className="space-y-6">
       <div>

@@ -107,6 +107,15 @@ export default function ExperimentsPage() {
     }
   }
 
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    api<{ data: Experiment[] }>('/experiments', { token })
+      .then((res) => setExperiments(res.data))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
   return (
     <div className="space-y-6">
       <div>
