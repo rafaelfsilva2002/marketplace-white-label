@@ -5,6 +5,7 @@ import { createEmbeddingWorker } from './workers/embedding.worker';
 import { createModerationWorker } from './workers/moderation.worker';
 import { createFraudDetectionWorker } from './workers/fraud-detection.worker';
 import { createSentimentAnalysisWorker } from './workers/sentiment-analysis.worker';
+import { createNotificationWorker } from './workers/notification.worker';
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
 
@@ -64,6 +65,10 @@ async function main(): Promise<void> {
   const sentimentAnalysisWorker = createSentimentAnalysisWorker(db, aiGateway);
   workers.push(sentimentAnalysisWorker);
   console.log(JSON.stringify({ level: 'info', message: 'Sentiment analysis worker registered' }));
+
+  const notificationWorker = createNotificationWorker();
+  workers.push(notificationWorker);
+  console.log(JSON.stringify({ level: 'info', message: 'Notification worker registered' }));
 
   console.log(
     JSON.stringify({
