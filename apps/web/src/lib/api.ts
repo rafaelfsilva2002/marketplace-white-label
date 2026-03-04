@@ -29,6 +29,16 @@ export async function api<T = unknown>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Clear stale tokens
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        document.cookie = 'accessToken=; path=/; max-age=0';
+        window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+      }
+      throw new Error('Session expired');
+    }
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || `HTTP ${response.status}`);
   }

@@ -39,6 +39,7 @@ export default function AdminLayout({
   function handleLogout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    document.cookie = 'accessToken=; path=/; max-age=0';
     router.replace('/login');
   }
 
