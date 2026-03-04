@@ -14,7 +14,9 @@ import {
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
+  Headers,
 } from '@nestjs/common';
+import { ApiResponse } from '@marketplace/shared';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -94,6 +96,27 @@ export class ProfileController {
     @Req() req: { correlationId?: string },
   ) {
     await this.profileService.softDelete(id, user.id, req.correlationId);
+  }
+
+  @Delete(':id/photos/:photoIndex')
+  @UseGuards(JwtAuthGuard)
+  async removePhoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('photoIndex', ParseIntPipe) photoIndex: number,
+    @CurrentUser() user: JwtUser,
+    @Headers('x-correlation-id') headerCorrelationId?: string,
+  ): Promise<ApiResponse<{ message: string; photos: string[] }>> {
+    const result = await this.profileService.removePhoto(
+      id,
+      photoIndex,
+      user.id,
+      headerCorrelationId,
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
   }
 
   @Get(':id/views')

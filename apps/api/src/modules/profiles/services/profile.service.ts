@@ -3,6 +3,8 @@ import {
   Inject,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { eq, and, sql, desc, count } from 'drizzle-orm';
 import { profiles, type Database } from '@marketplace/database';
@@ -247,5 +249,55 @@ export class ProfileService {
       { profileId: id, correlationId: corrId },
       'ProfileService',
     );
+  }
+
+  async removePhoto(
+    id: string,
+    photoIndex: number,
+    userId: string,
+    correlationId?: string,
+  ): Promise<{ message: string; photos: string[] }> {
+    const corrId = correlationId ?? getCorrelationId();
+
+    const profile = await this.findById(id);
+
+    if (profile.userId !== userId) {
+      throw new ForbiddenException('You can only remove photos from your own profile');
+    }
+
+    if (photoIndex < 0 || photoIndex >= profile.photos.length) {
+      throw new BadRequestException(
+        `Invalid photo index ${photoIndex}. Profile has ${profile.photos.length} photo(s)`,
+      );
+    }
+
+    const removedPhoto = profile.photos[photoIndex];
+    const updatedPhotos = [...profile.photos];
+    updatedPhotos.splice(photoIndex, 1);
+
+    await this.db
+      .update(profiles)
+      .set({ photos: updatedPhotos, updatedAt: new Date() })
+      .where(eq(profiles.id, id));
+
+    await this.auditService.record({
+      userId,
+      action: 'profile.photo_removed',
+      entityType: 'profile',
+      entityId: id,
+      oldValue: { photos: profile.photos },
+      newValue: { photos: updatedPhotos },
+      metadata: { removedPhoto, photoIndex },
+      correlationId: corrId,
+    });
+
+    this.logger.logWithData(
+      'info',
+      'Profile photo removed',
+      { profileId: id, photoIndex, correlationId: corrId },
+      'ProfileService',
+    );
+
+    return { message: 'Photo removed successfully', photos: updatedPhotos };
   }
 }
