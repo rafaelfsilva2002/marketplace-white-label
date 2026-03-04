@@ -49,7 +49,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   app.setGlobalPrefix('api/v1', {
-    exclude: ['/health'],
+    exclude: ['/health', '/metrics'],
   });
 
   setupSwagger(app);

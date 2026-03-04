@@ -19,6 +19,7 @@ import { AgentsModule } from './modules/agents/agents.module';
 import { ExperimentsModule } from './modules/experiments/experiments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthModule } from './modules/health/health.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
       validate,
     }),
     HealthModule,
+    MetricsModule,
     AuthModule,
     ProfilesModule,
     SearchModule,
