@@ -17,6 +17,13 @@ async function bootstrap() {
     { rawBody: true },
   );
 
+  // Security headers (Helmet) + response compression
+  const fastifyInstance = app.getHttpAdapter().getInstance();
+  await fastifyInstance.register(import('@fastify/helmet'), {
+    contentSecurityPolicy: false, // Let frontend handle CSP
+  });
+  await fastifyInstance.register(import('@fastify/compress'), { global: true });
+
   // Enable graceful shutdown hooks (listens for SIGTERM, SIGINT, etc.)
   app.enableShutdownHooks();
 
@@ -28,9 +35,15 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map(s => s.trim());
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-Id'],
   });
 
   app.useGlobalFilters(new HttpExceptionFilter());
