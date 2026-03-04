@@ -95,6 +95,13 @@ export class StripeWebhookController {
         );
         break;
 
+      case 'payment_intent.payment_failed':
+        await this.handlePaymentIntentFailed(
+          event.data.object as Stripe.PaymentIntent,
+          event.id,
+        );
+        break;
+
       case 'customer.subscription.updated':
         await this.handleSubscriptionUpdated(
           event.data.object as Stripe.Subscription,
@@ -109,9 +116,46 @@ export class StripeWebhookController {
         );
         break;
 
+      case 'invoice.paid':
+        await this.handleInvoicePaid(
+          event.data.object as Stripe.Invoice,
+          event.id,
+        );
+        break;
+
+      case 'invoice.payment_failed':
+        await this.handleInvoicePaymentFailed(
+          event.data.object as Stripe.Invoice,
+          event.id,
+        );
+        break;
+
       case 'account.updated':
         await this.handleAccountUpdated(
           event.data.object as Stripe.Account,
+          event.id,
+        );
+        break;
+
+      case 'payout.paid':
+        await this.handlePayoutCompleted(
+          event.data.object as Stripe.Payout,
+          event.id,
+          'paid',
+        );
+        break;
+
+      case 'payout.failed':
+        await this.handlePayoutCompleted(
+          event.data.object as Stripe.Payout,
+          event.id,
+          'failed',
+        );
+        break;
+
+      case 'charge.refunded':
+        await this.handleChargeRefunded(
+          event.data.object as Stripe.Charge,
           event.id,
         );
         break;
@@ -151,6 +195,36 @@ export class StripeWebhookController {
     });
   }
 
+  private async handlePaymentIntentFailed(
+    paymentIntent: Stripe.PaymentIntent,
+    eventId: string,
+  ): Promise<void> {
+    this.logger.log({
+      message: 'Processing payment_intent.payment_failed',
+      paymentIntentId: paymentIntent.id,
+      eventId,
+    });
+
+    const failureMessage =
+      paymentIntent.last_payment_error?.message ?? 'Unknown failure';
+    const failureCode = paymentIntent.last_payment_error?.code ?? 'unknown';
+
+    await this.auditService.record({
+      userId: paymentIntent.metadata.userId,
+      action: 'webhook.payment_intent.failed',
+      entityType: 'payment_intent',
+      entityId: paymentIntent.id,
+      newValue: {
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        status: paymentIntent.status,
+        failureCode,
+        failureMessage,
+      },
+      metadata: { stripeEventId: eventId },
+    });
+  }
+
   private async handleSubscriptionUpdated(
     subscription: Stripe.Subscription,
     eventId: string,
@@ -179,6 +253,72 @@ export class StripeWebhookController {
     });
   }
 
+  private async handleInvoicePaid(
+    invoice: Stripe.Invoice,
+    eventId: string,
+  ): Promise<void> {
+    this.logger.log({
+      message: 'Processing invoice.paid',
+      invoiceId: invoice.id,
+      subscriptionId: invoice.subscription,
+      eventId,
+    });
+
+    await this.auditService.record({
+      action: 'webhook.invoice.paid',
+      entityType: 'invoice',
+      entityId: invoice.id,
+      newValue: {
+        amountPaid: invoice.amount_paid,
+        currency: invoice.currency,
+        subscriptionId:
+          typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : invoice.subscription?.id,
+        status: invoice.status,
+      },
+      metadata: { stripeEventId: eventId },
+    });
+  }
+
+  private async handleInvoicePaymentFailed(
+    invoice: Stripe.Invoice,
+    eventId: string,
+  ): Promise<void> {
+    this.logger.log({
+      message: 'Processing invoice.payment_failed',
+      invoiceId: invoice.id,
+      subscriptionId: invoice.subscription,
+      eventId,
+    });
+
+    const subscriptionId =
+      typeof invoice.subscription === 'string'
+        ? invoice.subscription
+        : invoice.subscription?.id;
+
+    if (subscriptionId) {
+      await this.subscriptionService.updateSubscriptionFromWebhook(
+        subscriptionId,
+        { status: 'past_due' } as Stripe.Subscription,
+      );
+    }
+
+    await this.auditService.record({
+      action: 'webhook.invoice.payment_failed',
+      entityType: 'invoice',
+      entityId: invoice.id,
+      newValue: {
+        amountDue: invoice.amount_due,
+        currency: invoice.currency,
+        subscriptionId,
+        attemptCount: invoice.attempt_count,
+        nextPaymentAttempt: invoice.next_payment_attempt,
+      },
+      metadata: { stripeEventId: eventId },
+    });
+  }
+
   private async handleAccountUpdated(
     account: Stripe.Account,
     eventId: string,
@@ -199,6 +339,66 @@ export class StripeWebhookController {
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
         detailsSubmitted: account.details_submitted,
+      },
+      metadata: { stripeEventId: eventId },
+    });
+  }
+
+  private async handlePayoutCompleted(
+    payout: Stripe.Payout,
+    eventId: string,
+    outcome: 'paid' | 'failed',
+  ): Promise<void> {
+    this.logger.log({
+      message: `Processing payout.${outcome}`,
+      payoutId: payout.id,
+      amount: payout.amount,
+      eventId,
+    });
+
+    await this.auditService.record({
+      action: `webhook.payout.${outcome}`,
+      entityType: 'payout',
+      entityId: payout.id,
+      newValue: {
+        amount: payout.amount,
+        currency: payout.currency,
+        status: payout.status,
+        arrivalDate: payout.arrival_date,
+        failureCode: payout.failure_code,
+        failureMessage: payout.failure_message,
+      },
+      metadata: {
+        stripeEventId: eventId,
+        userId: payout.metadata?.userId,
+      },
+    });
+  }
+
+  private async handleChargeRefunded(
+    charge: Stripe.Charge,
+    eventId: string,
+  ): Promise<void> {
+    this.logger.log({
+      message: 'Processing charge.refunded',
+      chargeId: charge.id,
+      amountRefunded: charge.amount_refunded,
+      eventId,
+    });
+
+    await this.auditService.record({
+      action: 'webhook.charge.refunded',
+      entityType: 'charge',
+      entityId: charge.id,
+      newValue: {
+        amount: charge.amount,
+        amountRefunded: charge.amount_refunded,
+        currency: charge.currency,
+        paymentIntentId:
+          typeof charge.payment_intent === 'string'
+            ? charge.payment_intent
+            : charge.payment_intent?.id,
+        refunded: charge.refunded,
       },
       metadata: { stripeEventId: eventId },
     });
