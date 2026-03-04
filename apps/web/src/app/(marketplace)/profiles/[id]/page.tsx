@@ -1,8 +1,44 @@
+import { notFound } from 'next/navigation';
 import { MapPin, Star, Shield, Clock, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RecommendationsSection } from '@/components/profiles/recommendations-section';
+import { api } from '@/lib/api';
+
+interface Profile {
+  id: string;
+  displayName: string;
+  bio?: string;
+  description?: string;
+  city?: string;
+  state?: string;
+  services: string[];
+  photos?: string[];
+  isVerified: boolean;
+  isActive: boolean;
+  viewsCount: number;
+  averageRating: number;
+  reviewCount: number;
+  createdAt: string;
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  comment: string;
+  userName: string;
+  sentimentLabel?: string;
+  createdAt: string;
+}
+
+interface PaginatedReviews {
+  data: Review[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 interface PageProps {
   params: { id: string };
@@ -10,43 +46,16 @@ interface PageProps {
 
 // Server Component
 export default async function ProfilePage({ params }: PageProps) {
-  // TODO: Replace with actual API call
-  // const profile = await api(`/profiles/${params.id}`);
-  const profile = {
-    id: params.id,
-    displayName: 'Maria Silva',
-    bio: 'Cabeleireira profissional com 10 anos de experiencia em cortes modernos e coloracao.',
-    description:
-      'Especializada em cortes femininos, coloracao e tratamentos capilares. Atendo em domicilio e em salao proprio. Formada pela escola XYZ com certificacoes internacionais.',
-    city: 'Sao Paulo',
-    state: 'SP',
-    services: ['Corte feminino', 'Coloracao', 'Escova progressiva', 'Tratamento capilar', 'Penteados'],
-    isVerified: true,
-    isActive: true,
-    viewsCount: 1432,
-    averageRating: 4.8,
-    reviewCount: 127,
-    createdAt: '2024-06-15',
-  };
+  let profile: Profile;
+  try {
+    profile = await api<Profile>(`/profiles/${params.id}`);
+  } catch {
+    notFound();
+  }
 
-  const reviews = [
-    {
-      id: '1',
-      rating: 5,
-      comment: 'Excelente profissional! Meu cabelo ficou incrivel.',
-      userName: 'Ana P.',
-      sentimentLabel: 'positive',
-      createdAt: '2024-12-10',
-    },
-    {
-      id: '2',
-      rating: 4,
-      comment: 'Muito bom atendimento, recomendo.',
-      userName: 'Carlos M.',
-      sentimentLabel: 'positive',
-      createdAt: '2024-12-05',
-    },
-  ];
+  const { data: reviews } = await api<PaginatedReviews>(
+    `/reviews/profile/${params.id}?limit=5`,
+  );
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -120,33 +129,39 @@ export default async function ProfilePage({ params }: PageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{review.userName}</span>
-                      <div className="flex">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < review.rating
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-muted'
-                            }`}
-                          />
-                        ))}
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="border-b pb-4 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{review.userName}</span>
+                        <div className="flex">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < review.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-muted'
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(review.createdAt).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(review.createdAt).toLocaleDateString('pt-BR')}
-                    </span>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {review.comment}
+                    </p>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {review.comment}
-                  </p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground text-center py-4">
+                  Nenhuma avaliacao ainda.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
