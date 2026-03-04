@@ -213,6 +213,22 @@
   - [x] Recent users list with role badges
   - [x] Quick links + refresh button
 
+## Fase 7 — Frontend Completeness & Test Coverage ✓
+
+### Concluido
+- [x] 7.1 Frontend API base URL fix (/api/v1 prefix)
+- [x] 7.2 Professional dashboard sub-pages
+  - [x] Reviews page (star ratings, sentiment badges, pagination)
+  - [x] Subscription page (current plan, upgrade/cancel, 3-tier comparison)
+  - [x] Settings page (profile form, password change, account deletion)
+  - [x] Label UI component added
+- [x] 7.3 Additional unit tests (71 tests, 5 files)
+  - [x] JwtAuthGuard: canActivate, handleRequest (9 tests)
+  - [x] RolesGuard: role matching, denial (10 tests)
+  - [x] HttpExceptionFilter: formatting, correlationId (16 tests)
+  - [x] ModerationService: queue, approve/reject (22 tests)
+  - [x] RecommendationService: embeddings, fallback (14 tests)
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
