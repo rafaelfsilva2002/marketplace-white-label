@@ -277,14 +277,24 @@ async function processNotificationJob(
     );
   }
 
-  // TODO: Channel 3 — WebSocket push via API (HTTP call to NestJS gateway)
-  // When the API exposes an internal endpoint for pushing real-time
-  // notifications, integrate it here:
-  //   await fetch(`${API_INTERNAL_URL}/internal/notifications/push`, {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({ userId, event: 'notification', data: payload }),
-  //   });
+  // Channel 3 — WebSocket push via NestJS API
+  const apiUrl = process.env.API_INTERNAL_URL || 'http://localhost:3001';
+  if (data.userId) {
+    try {
+      await fetch(`${apiUrl}/api/v1/notifications/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: data.userId,
+          event: data.type,
+          data: { title: payload.title, body: payload.body },
+        }),
+      });
+    } catch (err) {
+      // Non-critical: log and continue
+      console.log(JSON.stringify({ level: 'warn', message: 'WebSocket push failed', error: String(err) }));
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
