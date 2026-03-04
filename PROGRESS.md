@@ -62,7 +62,26 @@
 - [x] Frontend — Search page atualizada com modo semantico real
 
 ## Fase 3 — Escala
-Status: Nao iniciada
+Status: Em andamento
+
+### Concluido
+- [x] 3.1 Crypto Rails — Adaptadores Ethereum/Polygon/Solana
+  - [x] Schema atualizado: crypto_wallets (MPC/Dfns), crypto_balances, crypto_ledger
+  - [x] packages/crypto-gateway — CryptoGateway interface + types
+  - [x] MockAdapter (dev/testes) + DfnsAdapter (producao)
+  - [x] CryptoWalletService (create, list, get wallets por chain)
+  - [x] CryptoBalanceService (credit/debit com idempotency + optimistic locking)
+  - [x] CryptoPaymentService (fee split 10% plataforma + outbox events)
+  - [x] CryptoController + DTOs + CryptoModule (provider factory mock/dfns)
+  - [x] RampService (on/off ramp BRL↔crypto)
+  - [x] Design: Dfns MPC custody, dual wallet (BRL + crypto), adapter pattern
+
+### Pendente
+- [ ] 3.2 Compliance AML para transacoes cripto
+- [ ] 3.3 Orquestracao com Temporal (workflows longos)
+- [ ] 3.4 Agentes IA com estado persistido
+- [ ] 3.5 A/B testing de modelos e prompts
+- [ ] 3.6 Decision delegation (autonomia gradual)
 
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
