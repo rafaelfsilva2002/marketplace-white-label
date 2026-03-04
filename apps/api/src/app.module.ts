@@ -11,6 +11,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { CryptoModule } from './modules/crypto/crypto.module';
+import { AmlModule } from './modules/aml/aml.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CryptoModule } from './modules/crypto/crypto.module';
     RecommendationsModule,
     PricingModule,
     CryptoModule,
+    AmlModule,
   ],
 })
 export class AppModule {}
