@@ -10,11 +10,12 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "bullmq": "^5.30.0",
-    "ioredis": "^5.4.0",
+    "@marketplace/ai-gateway": "workspace:*",
     "@marketplace/database": "workspace:*",
     "@marketplace/shared": "workspace:*",
-    "@marketplace/ai-gateway": "workspace:*"
+    "@sendgrid/mail": "^8.1.6",
+    "bullmq": "^5.30.0",
+    "ioredis": "^5.4.0"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

@@ -11,6 +11,7 @@ export type NotificationType =
 export interface NotificationJobData {
   type: NotificationType;
   userId: string;
+  email?: string;
   correlationId: string;
   metadata?: Record<string, unknown>;
 }
@@ -20,57 +21,178 @@ interface NotificationPayload {
   type: NotificationType;
   title: string;
   body: string;
+  html: string;
   metadata: Record<string, unknown>;
 }
 
+// ---------------------------------------------------------------------------
+// Standalone email helper — runs outside NestJS DI
+// Mirrors the API-side EmailService logic so the worker can send emails
+// directly from its own process.
+// ---------------------------------------------------------------------------
+let sgMail: any = null;
+let sgMailInitialized = false;
+
+async function initSendGrid(): Promise<void> {
+  if (sgMailInitialized) return;
+  sgMailInitialized = true;
+
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        message: 'SENDGRID_API_KEY not set, emails will be logged only',
+      }),
+    );
+    return;
+  }
+
+  try {
+    const sg = await import('@sendgrid/mail');
+    sg.default.setApiKey(apiKey);
+    sgMail = sg.default;
+    console.log(
+      JSON.stringify({ level: 'info', message: 'SendGrid configured for notification worker' }),
+    );
+  } catch {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        message: 'SendGrid module not available, emails will be logged only',
+      }),
+    );
+  }
+}
+
+async function sendEmail(params: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  correlationId: string;
+}): Promise<boolean> {
+  const from = process.env.EMAIL_FROM || 'noreply@marketplace.com';
+
+  if (!sgMail) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        message: '[DEV EMAIL] Email logged (SendGrid not configured)',
+        correlationId: params.correlationId,
+        to: params.to,
+        subject: params.subject,
+        body: params.text,
+      }),
+    );
+    return true;
+  }
+
+  try {
+    await sgMail.send({
+      to: params.to,
+      from,
+      subject: params.subject,
+      text: params.text,
+      html: params.html,
+    });
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        message: 'Email sent via SendGrid',
+        correlationId: params.correlationId,
+        to: params.to,
+        subject: params.subject,
+      }),
+    );
+    return true;
+  } catch (error) {
+    console.log(
+      JSON.stringify({
+        level: 'error',
+        message: 'Failed to send email via SendGrid',
+        correlationId: params.correlationId,
+        to: params.to,
+        subject: params.subject,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Notification payload builder
+// ---------------------------------------------------------------------------
 function buildNotificationPayload(data: NotificationJobData): NotificationPayload {
   const { type, userId, metadata = {} } = data;
 
   switch (type) {
-    case 'payment.succeeded':
+    case 'payment.succeeded': {
+      const amount = metadata.amount as number | undefined;
+      const currency = (metadata.currency as string) || 'BRL';
+      const formatted = amount != null ? `${currency} ${(amount / 100).toFixed(2)}` : `N/A ${currency}`;
       return {
         userId,
         type,
-        title: 'Payment Received',
-        body: `Your payment of ${metadata.amount ?? 'N/A'} ${metadata.currency ?? 'BRL'} has been processed successfully.`,
+        title: 'Pagamento confirmado',
+        body: `Seu pagamento de ${formatted} foi confirmado com sucesso.`,
+        html: `<h2>Pagamento Confirmado</h2><p>Seu pagamento de <strong>${formatted}</strong> foi confirmado com sucesso.</p>`,
         metadata,
       };
+    }
 
-    case 'profile.approved':
+    case 'profile.approved': {
+      const profileName = (metadata.profileName as string) || 'seu perfil';
       return {
         userId,
         type,
-        title: 'Profile Approved',
-        body: 'Your profile has been reviewed and approved by our moderation team. It is now visible to users.',
+        title: 'Perfil aprovado',
+        body: `Seu perfil "${profileName}" foi aprovado e ja esta visivel na plataforma.`,
+        html: `<h2>Perfil Aprovado</h2><p>Seu perfil <strong>"${profileName}"</strong> foi aprovado e ja esta visivel na plataforma.</p>`,
         metadata,
       };
+    }
 
-    case 'profile.deactivated':
+    case 'profile.deactivated': {
+      const reason = (metadata.reason as string) || 'policy violation';
       return {
         userId,
         type,
-        title: 'Profile Deactivated',
-        body: `Your profile has been deactivated. Reason: ${metadata.reason ?? 'policy violation'}. Please contact support for more information.`,
+        title: 'Perfil desativado',
+        body: `Seu perfil foi desativado. Motivo: ${reason}`,
+        html: `<h2>Perfil Desativado</h2><p>Seu perfil foi desativado. Motivo: <strong>${reason}</strong></p>`,
         metadata,
       };
+    }
 
-    case 'review.created':
+    case 'review.created': {
+      const rating = metadata.rating as number | undefined;
+      const profileName = (metadata.profileName as string) || 'seu perfil';
+      const stars = rating != null ? `${rating} estrelas` : 'nova avaliacao';
       return {
         userId,
         type,
-        title: 'New Review Received',
-        body: `You received a new ${metadata.rating ?? ''}${metadata.rating ? '-star' : ''} review${metadata.reviewerName ? ` from ${metadata.reviewerName}` : ''}.`,
+        title: `Nova avaliacao: ${stars}`,
+        body: `Seu perfil "${profileName}" recebeu uma nova avaliacao de ${stars}.`,
+        html: `<h2>Nova Avaliacao</h2><p>Seu perfil <strong>"${profileName}"</strong> recebeu uma nova avaliacao de <strong>${stars}</strong>.</p>`,
         metadata,
       };
+    }
 
-    case 'subscription.expiring':
+    case 'subscription.expiring': {
+      const planType = (metadata.planType as string) || 'sua assinatura';
+      const daysLeft = metadata.daysLeft as number | undefined;
+      const daysText = daysLeft != null ? `${daysLeft} dias` : 'em breve';
       return {
         userId,
         type,
-        title: 'Subscription Expiring Soon',
-        body: `Your ${metadata.planName ?? 'subscription'} plan expires on ${metadata.expiresAt ?? 'soon'}. Renew now to keep your benefits.`,
+        title: 'Assinatura expirando em breve',
+        body: `Sua assinatura ${planType} expira em ${daysText}. Renove para manter seus beneficios.`,
+        html: `<h2>Assinatura Expirando</h2><p>Sua assinatura <strong>${planType}</strong> expira em <strong>${daysText}</strong>. Renove para manter seus beneficios.</p>`,
         metadata,
       };
+    }
 
     default: {
       const _exhaustive: never = type;
@@ -79,10 +201,13 @@ function buildNotificationPayload(data: NotificationJobData): NotificationPayloa
   }
 }
 
+// ---------------------------------------------------------------------------
+// Job processor
+// ---------------------------------------------------------------------------
 async function processNotificationJob(
   job: Job<NotificationJobData>,
 ): Promise<void> {
-  const { type, userId, correlationId } = job.data;
+  const { type, userId, email, correlationId } = job.data;
 
   console.log(
     JSON.stringify({
@@ -95,10 +220,12 @@ async function processNotificationJob(
     }),
   );
 
+  // Ensure SendGrid is initialized on first job
+  await initSendGrid();
+
   const payload = buildNotificationPayload(job.data);
 
-  // TODO: Replace with actual email/push notification delivery
-  // For now, log the notification as structured output
+  // --- Channel 1: Structured log (always) ---
   console.log(
     JSON.stringify({
       level: 'info',
@@ -111,12 +238,58 @@ async function processNotificationJob(
         body: payload.body,
         metadata: payload.metadata,
       },
-      channel: 'log', // Will be 'email' | 'push' | 'sms' when delivery is implemented
+      channel: 'log',
       timestamp: new Date().toISOString(),
     }),
   );
+
+  // --- Channel 2: Email delivery ---
+  if (email) {
+    const sent = await sendEmail({
+      to: email,
+      subject: payload.title,
+      text: payload.body,
+      html: payload.html,
+      correlationId,
+    });
+
+    console.log(
+      JSON.stringify({
+        level: sent ? 'info' : 'warn',
+        message: sent ? 'Email notification delivered' : 'Email notification failed (non-fatal)',
+        correlationId,
+        userId,
+        email,
+        channel: 'email',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  } else {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        message: 'No email address provided, skipping email channel',
+        correlationId,
+        userId,
+        channel: 'email',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  }
+
+  // TODO: Channel 3 — WebSocket push via API (HTTP call to NestJS gateway)
+  // When the API exposes an internal endpoint for pushing real-time
+  // notifications, integrate it here:
+  //   await fetch(`${API_INTERNAL_URL}/internal/notifications/push`, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({ userId, event: 'notification', data: payload }),
+  //   });
 }
 
+// ---------------------------------------------------------------------------
+// Worker factory
+// ---------------------------------------------------------------------------
 export function createNotificationWorker(): Worker<NotificationJobData> {
   const connection = createRedisConnection();
 
