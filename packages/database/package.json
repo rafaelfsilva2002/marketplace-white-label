@@ -11,16 +11,20 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "seed": "tsx src/seed/seed.ts",
     "test": "vitest run",
     "lint": "eslint src/"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.38.0",
     "postgres": "^3.4.0",
     "@marketplace/shared": "workspace:*"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.0",
     "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
