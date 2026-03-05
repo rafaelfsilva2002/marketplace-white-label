@@ -1,6 +1,2 @@
-export enum UserRole {
-  Admin = 'admin',
-  Moderator = 'moderator',
-  Professional = 'professional',
-  User = 'user',
-}
+// Re-export from canonical location for backward compatibility.
+export { UserRole } from '../types/enums';

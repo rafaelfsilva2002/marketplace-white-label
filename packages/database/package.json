@@ -11,6 +11,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "studio": "drizzle-kit studio",
     "seed": "tsx src/seed/seed.ts",
     "test": "vitest run --passWithNoTests",
     "lint": "eslint src/"

@@ -1,11 +1,15 @@
 import type { Worker } from 'bullmq';
 import { createDb } from '@marketplace/database';
 import type { AIGateway } from '@marketplace/ai-gateway';
+import { createLogger } from './lib/logger';
 import { createEmbeddingWorker } from './workers/embedding.worker';
 import { createModerationWorker } from './workers/moderation.worker';
 import { createFraudDetectionWorker } from './workers/fraud-detection.worker';
 import { createSentimentAnalysisWorker } from './workers/sentiment-analysis.worker';
 import { createNotificationWorker } from './workers/notification.worker';
+import { createAmlScreeningWorker } from './workers/aml-screening.worker';
+
+const logger = createLogger('WorkerMain');
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
 
@@ -25,25 +29,16 @@ function createAIGateway(): AIGateway {
     }
     throw new Error('No createAIGateway or default export found in @marketplace/ai-gateway');
   } catch (error) {
-    console.log(
-      JSON.stringify({
-        level: 'error',
-        message: 'Failed to create AI Gateway — ensure @marketplace/ai-gateway exports a factory',
-        error: error instanceof Error ? error.message : String(error),
-      }),
+    logger.error(
+      'Failed to create AI Gateway — ensure @marketplace/ai-gateway exports a factory',
+      { error: error instanceof Error ? error.message : String(error) },
     );
     throw error;
   }
 }
 
 async function main(): Promise<void> {
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      message: 'Marketplace workers starting',
-      timestamp: new Date().toISOString(),
-    }),
-  );
+  logger.info('Marketplace workers starting');
 
   const db = createDb(DATABASE_URL);
   const aiGateway = createAIGateway();
@@ -52,70 +47,48 @@ async function main(): Promise<void> {
 
   const embeddingWorker = createEmbeddingWorker(db, aiGateway);
   workers.push(embeddingWorker);
-  console.log(JSON.stringify({ level: 'info', message: 'Embedding worker registered' }));
+  logger.info('Embedding worker registered');
 
   const moderationWorker = createModerationWorker(db, aiGateway);
   workers.push(moderationWorker);
-  console.log(JSON.stringify({ level: 'info', message: 'Moderation worker registered' }));
+  logger.info('Moderation worker registered');
 
   const fraudDetectionWorker = createFraudDetectionWorker(db, aiGateway);
   workers.push(fraudDetectionWorker);
-  console.log(JSON.stringify({ level: 'info', message: 'Fraud detection worker registered' }));
+  logger.info('Fraud detection worker registered');
 
   const sentimentAnalysisWorker = createSentimentAnalysisWorker(db, aiGateway);
   workers.push(sentimentAnalysisWorker);
-  console.log(JSON.stringify({ level: 'info', message: 'Sentiment analysis worker registered' }));
+  logger.info('Sentiment analysis worker registered');
 
   const notificationWorker = createNotificationWorker(db);
   workers.push(notificationWorker);
-  console.log(JSON.stringify({ level: 'info', message: 'Notification worker registered' }));
+  logger.info('Notification worker registered');
 
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      message: `All ${workers.length} workers registered and listening`,
-      timestamp: new Date().toISOString(),
-    }),
-  );
+  const amlScreeningWorker = createAmlScreeningWorker(db);
+  workers.push(amlScreeningWorker);
+  logger.info('AML screening worker registered');
+
+  logger.info(`All ${workers.length} workers registered and listening`);
 
   async function shutdown(signal: string): Promise<void> {
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        message: `Received ${signal}, shutting down workers gracefully`,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    logger.info(`Received ${signal}, shutting down workers gracefully`);
 
     const closePromises = workers.map(async (worker) => {
       try {
         await worker.close();
-        console.log(
-          JSON.stringify({
-            level: 'info',
-            message: `Worker ${worker.name} closed`,
-          }),
-        );
+        logger.info(`Worker ${worker.name} closed`);
       } catch (error) {
-        console.log(
-          JSON.stringify({
-            level: 'error',
-            message: `Error closing worker ${worker.name}`,
-            error: error instanceof Error ? error.message : String(error),
-          }),
+        logger.error(
+          `Error closing worker ${worker.name}`,
+          { error: error instanceof Error ? error.message : String(error) },
         );
       }
     });
 
     await Promise.allSettled(closePromises);
 
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        message: 'All workers shut down, exiting',
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    logger.info('All workers shut down, exiting');
 
     process.exit(0);
   }
@@ -125,13 +98,12 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(
-    JSON.stringify({
-      level: 'fatal',
-      message: 'Failed to start workers',
+  logger.fatal(
+    'Failed to start workers',
+    {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-    }),
+    },
   );
   process.exit(1);
 });

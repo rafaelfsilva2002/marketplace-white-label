@@ -1,3 +1,8 @@
+// ---------------------------------------------------------------------------
+// Legacy common types — kept for backward compatibility.
+// New code should import from '@marketplace/shared' directly.
+// ---------------------------------------------------------------------------
+
 export interface PaginationParams {
   page: number;
   limit: number;

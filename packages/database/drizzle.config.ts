@@ -2,7 +2,7 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   schema: './src/schema/index.ts',
-  out: './src/migrations',
+  out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL || 'postgresql://marketplace:marketplace@localhost:5432/marketplace',

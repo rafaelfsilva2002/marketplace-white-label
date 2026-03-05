@@ -4,20 +4,10 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'crypto';
-
-interface ErrorLogEntry {
-  level: 'error';
-  timestamp: string;
-  correlationId: string;
-  statusCode: number;
-  path: string;
-  method: string;
-  message: string;
-  stack?: string;
-}
 
 interface ErrorResponse {
   success: false;
@@ -30,6 +20,8 @@ interface ErrorResponse {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<FastifyRequest>();
@@ -48,21 +40,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? this.extractMessage(exception)
         : 'Internal Server Error';
 
-    const logEntry: ErrorLogEntry = {
-      level: 'error',
-      timestamp: new Date().toISOString(),
+    const logContext = {
       correlationId,
       statusCode,
       path: request.url,
       method: request.method,
       message,
+      ...(!(exception instanceof HttpException) && exception instanceof Error
+        ? { stack: exception.stack }
+        : {}),
     };
 
-    if (!(exception instanceof HttpException) && exception instanceof Error) {
-      logEntry.stack = exception.stack;
+    if (statusCode >= 500) {
+      this.logger.error(logContext, exception instanceof Error ? exception.stack : undefined);
+    } else {
+      this.logger.warn(logContext);
     }
-
-    console.log(JSON.stringify(logEntry));
 
     const errorResponse: ErrorResponse = {
       success: false,

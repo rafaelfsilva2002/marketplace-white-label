@@ -4,8 +4,8 @@ import {
   HttpStatus,
   BadRequestException,
   NotFoundException,
-  InternalServerErrorException,
   ArgumentsHost,
+  Logger,
 } from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 
@@ -56,12 +56,14 @@ function createMockHost(
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
+  let loggerWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     filter = new HttpExceptionFilter();
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    loggerErrorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    loggerWarnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
   });
 
   // -------------------------------------------------------------------------
@@ -170,10 +172,10 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host);
 
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
-      const loggedEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string);
-      expect(loggedEntry.stack).toBeDefined();
-      expect(loggedEntry.stack).toContain('TypeError');
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      const logContext = loggerErrorSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(logContext.stack).toBeDefined();
+      expect(logContext.stack).toContain('TypeError');
     });
 
     it('should handle non-Error exceptions (plain strings thrown)', () => {
@@ -195,8 +197,9 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host);
 
-      const loggedEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string);
-      expect(loggedEntry.stack).toBeUndefined();
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      const logContext = loggerErrorSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(logContext.stack).toBeUndefined();
     });
   });
 
@@ -227,7 +230,7 @@ describe('HttpExceptionFilter', () => {
       expect(sentBody.error.correlationId).toBe('mock-uuid-fallback');
     });
 
-    it('should include correlationId in the JSON log entry', () => {
+    it('should include correlationId in the log context', () => {
       const exception = new HttpException('err', 400);
       const { host } = createMockHost({
         'x-correlation-id': 'log-corr-456',
@@ -235,8 +238,9 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host);
 
-      const loggedEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string);
-      expect(loggedEntry.correlationId).toBe('log-corr-456');
+      expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
+      const logContext = loggerWarnSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(logContext.correlationId).toBe('log-corr-456');
     });
   });
 
@@ -245,7 +249,7 @@ describe('HttpExceptionFilter', () => {
   // -------------------------------------------------------------------------
 
   describe('structured log entry', () => {
-    it('should log a JSON entry with all required fields', () => {
+    it('should log with all required context fields', () => {
       const exception = new NotFoundException('Item not found');
       const { host } = createMockHost(
         { 'x-correlation-id': 'corr-log-test' },
@@ -255,16 +259,35 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host);
 
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
-      const loggedEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string);
+      // 404 is a client error (< 500), so it uses warn
+      expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
+      const logContext = loggerWarnSpy.mock.calls[0][0] as Record<string, unknown>;
 
-      expect(loggedEntry.level).toBe('error');
-      expect(loggedEntry.timestamp).toBeDefined();
-      expect(loggedEntry.correlationId).toBe('corr-log-test');
-      expect(loggedEntry.statusCode).toBe(404);
-      expect(loggedEntry.path).toBe('/api/items/123');
-      expect(loggedEntry.method).toBe('DELETE');
-      expect(loggedEntry.message).toBe('Item not found');
+      expect(logContext.correlationId).toBe('corr-log-test');
+      expect(logContext.statusCode).toBe(404);
+      expect(logContext.path).toBe('/api/items/123');
+      expect(logContext.method).toBe('DELETE');
+      expect(logContext.message).toBe('Item not found');
+    });
+
+    it('should use logger.error for 5xx status codes', () => {
+      const exception = new Error('Database connection failed');
+      const { host } = createMockHost();
+
+      filter.catch(exception, host);
+
+      expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
+      expect(loggerWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it('should use logger.warn for 4xx status codes', () => {
+      const exception = new BadRequestException('Bad request');
+      const { host } = createMockHost();
+
+      filter.catch(exception, host);
+
+      expect(loggerWarnSpy).toHaveBeenCalledTimes(1);
+      expect(loggerErrorSpy).not.toHaveBeenCalled();
     });
 
     it('should not include stack for HttpExceptions', () => {
@@ -273,8 +296,8 @@ describe('HttpExceptionFilter', () => {
 
       filter.catch(exception, host);
 
-      const loggedEntry = JSON.parse(consoleSpy.mock.calls[0][0] as string);
-      expect(loggedEntry.stack).toBeUndefined();
+      const logContext = loggerWarnSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(logContext.stack).toBeUndefined();
     });
   });
 });
