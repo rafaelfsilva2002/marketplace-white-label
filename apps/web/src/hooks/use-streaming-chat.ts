@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { getAccessToken } from '@/lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -17,7 +18,7 @@ export function useStreamingChat() {
     setIsLoading(true);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const token = getAccessToken();
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/ai/chat`, {
         method: 'POST',
         headers: {

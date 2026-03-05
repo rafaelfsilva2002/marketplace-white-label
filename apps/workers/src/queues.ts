@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   REPORT_GENERATION: 'report-generation',
   AML_SCREENING: 'aml-screening',
   WEBHOOK_RETRY: 'webhook-retry',
+  AUDIT_ARCHIVAL: 'audit-archival',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

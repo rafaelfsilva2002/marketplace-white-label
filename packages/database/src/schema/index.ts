@@ -3,6 +3,7 @@ export * from './refresh-tokens';
 export * from './profiles';
 export * from './reviews';
 export * from './audit-log';
+export * from './audit-log-archive';
 export * from './outbox';
 export * from './profile-views';
 export * from './payments';

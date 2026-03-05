@@ -26,7 +26,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 /* ---------- Types ---------- */
 
@@ -284,7 +284,7 @@ export default function AdminUsuariosPage() {
   } | null>(null);
 
   const getToken = useCallback(() => {
-    return localStorage.getItem('accessToken') || '';
+    return getAccessToken() || '';
   }, []);
 
   const fetchUsers = useCallback(
@@ -297,7 +297,6 @@ export default function AdminUsuariosPage() {
       try {
         const data = await api<PaginatedUsers>(
           `/admin/users?limit=${PAGE_SIZE}&offset=${newOffset}`,
-          { token },
         );
         setUsers(data.data);
         setTotal(data.total);
@@ -333,13 +332,11 @@ export default function AdminUsuariosPage() {
 
   const handleRoleChange = useCallback(
     async (userId: string, newRole: string) => {
-      const token = getToken();
-      if (!token) return;
+      if (!getToken()) return;
 
       setActionLoading(userId);
       try {
         const updated = await api<User>(`/admin/users/${userId}/role`, {
-          token,
           method: 'PUT',
           body: JSON.stringify({ role: newRole }),
         });
@@ -367,13 +364,11 @@ export default function AdminUsuariosPage() {
 
   const handleToggleVerified = useCallback(
     async (userId: string, currentlyVerified: boolean) => {
-      const token = getToken();
-      if (!token) return;
+      if (!getToken()) return;
 
       setActionLoading(userId);
       try {
         await api(`/admin/users/${userId}/verify`, {
-          token,
           method: 'PUT',
           body: JSON.stringify({ verified: !currentlyVerified }),
         });
@@ -410,13 +405,11 @@ export default function AdminUsuariosPage() {
       );
       if (!confirmed) return;
 
-      const token = getToken();
-      if (!token) return;
+      if (!getToken()) return;
 
       setActionLoading(userId);
       try {
         await api(`/admin/users/${userId}`, {
-          token,
           method: 'DELETE',
         });
         setUsers((prev) =>

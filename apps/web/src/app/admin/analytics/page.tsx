@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 import {
   SimpleBarChart,
   HorizontalBarChart,
@@ -227,7 +227,7 @@ export default function AnalyticsDashboardPage() {
   const [error, setError] = useState('');
 
   const getToken = useCallback(() => {
-    return localStorage.getItem('accessToken') || '';
+    return getAccessToken() || '';
   }, []);
 
   const fetchAll = useCallback(async () => {

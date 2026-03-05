@@ -15,6 +15,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -41,8 +42,8 @@ export class ReviewController {
   @Get('profile/:profileId')
   async findByProfile(
     @Param('profileId', ParseUUIDPipe) profileId: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
   ) {
     return this.reviewService.findByProfile(profileId, page, limit);
   }

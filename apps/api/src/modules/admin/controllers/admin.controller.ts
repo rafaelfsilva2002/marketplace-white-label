@@ -16,6 +16,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -42,8 +43,8 @@ export class AdminController {
 
   @Get('users')
   async getUsers(
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe, new ClampPipe(0, Infinity)) offset: number,
     @Query('role') role?: string,
   ) {
     return this.adminService.getUsers(limit, offset, role);
@@ -89,9 +90,14 @@ export class AdminController {
     @Query('action') action?: string,
     @Query('entityType') entityType?: string,
   ): Promise<ApiResponse<any>> {
+    const parsedPage = page ? Math.max(1, parseInt(page, 10)) : undefined;
+    const parsedLimit = limit
+      ? Math.min(100, Math.max(1, parseInt(limit, 10)))
+      : undefined;
+
     const result = await this.adminService.getAuditLogs({
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      page: parsedPage,
+      limit: parsedLimit,
       userId,
       action,
       entityType,

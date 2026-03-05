@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { getAccessToken, saveTokens, clearTokens } from '@/lib/api';
 
 interface User {
   id: string;
@@ -16,7 +17,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       setLoading(false);
       return;
@@ -31,25 +32,19 @@ export function useAuth() {
         role: payload.role,
       });
     } catch {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearTokens();
     }
     setLoading(false);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    document.cookie = 'accessToken=; path=/; max-age=0';
+    clearTokens();
     setUser(null);
     router.replace('/login');
   }, [router]);
 
-  const setTokens = useCallback((access: string, refresh: string) => {
-    localStorage.setItem('accessToken', access);
-    localStorage.setItem('refreshToken', refresh);
-    // Also set cookie for middleware SSR access
-    document.cookie = `accessToken=${access}; path=/; max-age=86400; SameSite=Lax`;
+  const setTokensAndUser = useCallback((access: string, refresh: string) => {
+    saveTokens(access, refresh);
     // Decode and set user
     try {
       const payload = JSON.parse(atob(access.split('.')[1]));
@@ -64,5 +59,5 @@ export function useAuth() {
     }
   }, []);
 
-  return { user, loading, logout, setTokens, isAuthenticated: !!user };
+  return { user, loading, logout, setTokens: setTokensAndUser, isAuthenticated: !!user };
 }

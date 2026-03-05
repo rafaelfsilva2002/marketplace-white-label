@@ -7,6 +7,7 @@ import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { getAccessToken } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
@@ -37,13 +38,8 @@ interface MessageItem {
   createdAt: string;
 }
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('accessToken');
-}
-
 function getCurrentUserId(): string | null {
-  const token = getToken();
+  const token = getAccessToken();
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
@@ -63,7 +59,7 @@ export default function ChatPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = getCurrentUserId();
-  const token = getToken();
+  const token = getAccessToken();
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {

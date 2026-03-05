@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/search', '/profiles'];
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/search', '/profiles'];
 const ADMIN_PATHS = ['/admin'];
 
 // --- i18n locale detection ---
@@ -81,20 +81,39 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // For admin paths, decode the JWT and check role
+  // Decode and validate JWT (expiry + role for admin paths).
+  // The middleware only performs basic checks — the API server does full verification.
+  let payload: { sub?: string; role?: string; exp?: number };
+  try {
+    payload = JSON.parse(
+      Buffer.from(token.split('.')[1], 'base64').toString('utf-8'),
+    );
+  } catch {
+    // Malformed token — clear the stale cookie and redirect to login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete('accessToken');
+    return response;
+  }
+
+  // Check if token has expired. Allow a small buffer (30s) to account for
+  // clock skew between server and client. The client-side API client will
+  // handle refresh; the middleware just prevents obviously stale tokens.
+  if (payload.exp && payload.exp * 1000 < Date.now() - 30_000) {
+    // Token is expired — let the client-side handle the refresh.
+    // Don't redirect to login here because the client may still have a valid
+    // refresh token and can silently refresh on the client side.
+    // We clear the cookie so subsequent middleware checks don't see a stale token.
+    const response = NextResponse.next();
+    response.cookies.delete('accessToken');
+    return response;
+  }
+
+  // For admin paths, check role
   if (ADMIN_PATHS.some(p => pathname.startsWith(p))) {
-    try {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString('utf-8'),
-      );
-      if (payload.role !== 'admin' && payload.role !== 'moderator') {
-        return NextResponse.redirect(new URL('/', request.url));
-      }
-    } catch {
-      // Invalid token — redirect to login
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
+    if (payload.role !== 'admin' && payload.role !== 'moderator') {
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 

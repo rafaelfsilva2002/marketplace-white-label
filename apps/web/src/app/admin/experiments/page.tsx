@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 interface Experiment {
   id: string;
@@ -67,15 +67,12 @@ export default function ExperimentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-
   async function loadResults(experimentId: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     setSelectedId(experimentId);
     try {
       const result = await api<{ data: ExperimentResults }>(
         `/experiments/${experimentId}/results`,
-        { token },
       );
       setSelectedResults(result.data);
     } catch {
@@ -84,9 +81,9 @@ export default function ExperimentsPage() {
   }
 
   async function startExperiment(id: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     try {
-      await api(`/experiments/${id}/start`, { token, method: 'POST' });
+      await api(`/experiments/${id}/start`, { method: 'POST' });
       setExperiments((prev) =>
         prev.map((e) => (e.id === id ? { ...e, status: 'running' } : e)),
       );
@@ -96,9 +93,9 @@ export default function ExperimentsPage() {
   }
 
   async function endExperiment(id: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     try {
-      await api(`/experiments/${id}/end`, { token, method: 'POST' });
+      await api(`/experiments/${id}/end`, { method: 'POST' });
       setExperiments((prev) =>
         prev.map((e) => (e.id === id ? { ...e, status: 'completed' } : e)),
       );
@@ -108,13 +105,13 @@ export default function ExperimentsPage() {
   }
 
   useEffect(() => {
-    if (!token) return;
+    if (!getAccessToken()) return;
     setLoading(true);
-    api<{ data: Experiment[] }>('/experiments', { token })
+    api<{ data: Experiment[] }>('/experiments')
       .then((res) => setExperiments(res.data))
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   return (
     <div className="space-y-6">

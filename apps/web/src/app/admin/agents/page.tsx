@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 interface Agent {
   id: string;
@@ -67,17 +67,15 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-
   useEffect(() => {
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     async function fetchData() {
       try {
         const [agentsRes, statsRes, actionsRes] = await Promise.all([
-          api<{ data: Agent[] }>('/agents', { token: token! }),
-          api<{ data: ActionStats }>('/agents/actions/stats', { token: token! }),
-          api<{ data: PendingAction[] }>('/agents/actions/pending', { token: token! }),
+          api<{ data: Agent[] }>('/agents'),
+          api<{ data: ActionStats }>('/agents/actions/stats'),
+          api<{ data: PendingAction[] }>('/agents/actions/pending'),
         ]);
         setAgents(agentsRes.data);
         setStats(statsRes.data);
@@ -90,17 +88,16 @@ export default function AgentsPage() {
     }
 
     fetchData();
-  }, [token]);
+  }, []);
 
   async function handleChat(agentId: string) {
-    if (!token || !chatMessage.trim()) return;
+    if (!getAccessToken() || !chatMessage.trim()) return;
     setChatLoading(true);
     setChatResponse(null);
     try {
       const result = await api<{ data: { message: { content: string } } }>(
         `/agents/${agentId}/chat`,
         {
-          token,
           method: 'POST',
           body: JSON.stringify({ message: chatMessage }),
         },
@@ -115,9 +112,9 @@ export default function AgentsPage() {
   }
 
   async function handleApprove(actionId: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     try {
-      await api(`/agents/actions/${actionId}/approve`, { token, method: 'POST' });
+      await api(`/agents/actions/${actionId}/approve`, { method: 'POST' });
       setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao aprovar');
@@ -125,10 +122,9 @@ export default function AgentsPage() {
   }
 
   async function handleReject(actionId: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     try {
       await api(`/agents/actions/${actionId}/reject`, {
-        token,
         method: 'POST',
         body: JSON.stringify({ reason: 'Rejeitado pelo admin' }),
       });

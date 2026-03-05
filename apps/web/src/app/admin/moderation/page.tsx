@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 type ModerationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -64,8 +64,7 @@ export default function ModerationPage() {
   );
 
   const fetchQueue = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setLoading(true);
     setError('');
@@ -74,7 +73,6 @@ export default function ModerationPage() {
       const params = filter !== 'all' ? `?status=${filter}` : '';
       const data = await api<ModerationItem[]>(
         `/moderation/queue${params}`,
-        { token },
       );
       setItems(data);
     } catch (err) {
@@ -93,15 +91,13 @@ export default function ModerationPage() {
   }, [fetchQueue]);
 
   async function handleAction(id: string, action: 'approve' | 'reject') {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setActionLoading((prev) => ({ ...prev, [id]: true }));
 
     try {
       await api(`/moderation/queue/${id}/${action}`, {
         method: 'POST',
-        token,
       });
       setItems((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {

@@ -43,16 +43,18 @@ export class StripeService {
       return existing;
     }
 
-    const account = await this.stripe.accounts.create({
-      type: 'express',
-      country: 'BR',
-      email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      metadata: { userId },
-    });
+    const account = await this.withRetry(() =>
+      this.stripe.accounts.create({
+        type: 'express',
+        country: 'BR',
+        email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        metadata: { userId },
+      }),
+    );
 
     const [created] = await this.db
       .insert(stripeAccounts)
@@ -93,12 +95,14 @@ export class StripeService {
       );
     }
 
-    const accountLink = await this.stripe.accountLinks.create({
-      account: account.stripeAccountId,
-      refresh_url: refreshUrl,
-      return_url: returnUrl,
-      type: 'account_onboarding',
-    });
+    const accountLink = await this.withRetry(() =>
+      this.stripe.accountLinks.create({
+        account: account.stripeAccountId,
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
+        type: 'account_onboarding',
+      }),
+    );
 
     return accountLink.url;
   }
@@ -126,8 +130,8 @@ export class StripeService {
       };
     }
 
-    const stripeAccount = await this.stripe.accounts.retrieve(
-      account.stripeAccountId,
+    const stripeAccount = await this.withRetry(() =>
+      this.stripe.accounts.retrieve(account.stripeAccountId),
     );
 
     const updatedStatus = stripeAccount.charges_enabled
@@ -197,5 +201,78 @@ export class StripeService {
 
   getStripeInstance(): Stripe {
     return this.stripe;
+  }
+
+  /**
+   * Retries a function with exponential backoff for transient Stripe errors.
+   * Backoff schedule: 500ms, 1000ms, 2000ms.
+   * Only retries on network errors, 429 rate limit, and 5xx server errors.
+   * Does NOT retry on 4xx client errors (invalid card, auth failures, etc.).
+   */
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    maxRetries = 3,
+  ): Promise<T> {
+    const baseDelay = 500;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error: unknown) {
+        const isLastAttempt = attempt === maxRetries;
+
+        if (isLastAttempt || !this.isTransientError(error)) {
+          throw error;
+        }
+
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+
+        this.logger.warn({
+          message: `Stripe API call failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms`,
+          error: error instanceof Error ? error.message : String(error),
+          statusCode:
+            error instanceof Stripe.errors.StripeAPIError
+              ? error.statusCode
+              : undefined,
+        });
+
+        await this.sleep(delay);
+      }
+    }
+
+    // Unreachable, but TypeScript needs it
+    throw new Error('withRetry: exhausted all retries');
+  }
+
+  private isTransientError(error: unknown): boolean {
+    // Network / connection errors (no HTTP status)
+    if (error instanceof Stripe.errors.StripeConnectionError) {
+      return true;
+    }
+
+    // Rate limit (429)
+    if (error instanceof Stripe.errors.StripeRateLimitError) {
+      return true;
+    }
+
+    // Generic Stripe API error — retry only on 5xx
+    if (error instanceof Stripe.errors.StripeAPIError) {
+      const status = error.statusCode;
+      return status !== undefined && status >= 500;
+    }
+
+    // Non-Stripe errors (e.g. fetch/network layer) — treat as transient
+    if (
+      error instanceof Error &&
+      ('code' in error || error.message.includes('ECONNRESET') || error.message.includes('ETIMEDOUT'))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

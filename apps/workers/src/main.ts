@@ -9,6 +9,7 @@ import { createSentimentAnalysisWorker } from './workers/sentiment-analysis.work
 import { createNotificationWorker } from './workers/notification.worker';
 import { createAmlScreeningWorker } from './workers/aml-screening.worker';
 import { createWebhookRetryWorker } from './workers/webhook-retry.worker';
+import { createAuditArchivalWorker } from './workers/audit-archival.worker';
 
 const logger = createLogger('WorkerMain');
 
@@ -73,6 +74,10 @@ async function main(): Promise<void> {
   const webhookRetryWorker = createWebhookRetryWorker();
   workers.push(webhookRetryWorker);
   logger.info('Webhook retry worker registered');
+
+  const auditArchivalWorker = createAuditArchivalWorker(db);
+  workers.push(auditArchivalWorker);
+  logger.info('Audit archival worker registered');
 
   logger.info(`All ${workers.length} workers registered and listening`);
 

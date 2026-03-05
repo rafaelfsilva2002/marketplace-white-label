@@ -9,6 +9,7 @@ import {
   DefaultValuePipe,
   BadRequestException,
 } from '@nestjs/common';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { SearchService } from '../services/search.service';
 import { GeoSearchService } from '../services/geo-search.service';
 import { SemanticSearchService } from '../services/semantic-search.service';
@@ -24,8 +25,8 @@ export class SearchController {
   @Get()
   async fullTextSearch(
     @Query('q') query: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
     @Query('city') city?: string,
     @Query('state') state?: string,
     @Query('services') servicesRaw?: string,
@@ -58,7 +59,7 @@ export class SearchController {
   @Get('suggest')
   async autocomplete(
     @Query('q') query: string,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
   ) {
     if (!query || !query.trim()) {
       throw new BadRequestException('Query parameter "q" is required');
@@ -72,8 +73,8 @@ export class SearchController {
     @Query('lat') latRaw: string,
     @Query('lng') lngRaw: string,
     @Query('radius', new DefaultValuePipe(10000), ParseIntPipe) radiusMeters: number,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
     @Query('services') servicesRaw?: string,
   ) {
     if (!latRaw || !lngRaw) {
@@ -126,11 +127,7 @@ export class SearchController {
       throw new BadRequestException('Field "query" is required');
     }
 
-    const limit = body.limit ?? 20;
-
-    if (limit < 1 || limit > 100) {
-      throw new BadRequestException('Field "limit" must be between 1 and 100');
-    }
+    const limit = Math.min(100, Math.max(1, body.limit ?? 20));
 
     const results = await this.semanticSearchService.search(body.query, {
       city: body.city,

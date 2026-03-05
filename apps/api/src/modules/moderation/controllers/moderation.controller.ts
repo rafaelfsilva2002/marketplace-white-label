@@ -14,6 +14,7 @@ import {
   DefaultValuePipe,
   Headers,
 } from '@nestjs/common';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -37,8 +38,8 @@ export class ModerationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Moderator, UserRole.Admin)
   async getQueue(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
     @Query('type') type?: 'profile' | 'review',
   ) {
     return this.moderationService.getQueue(page, limit, type);
@@ -100,8 +101,8 @@ export class ModerationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Moderator, UserRole.Admin)
   async getReports(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
     @Query('status') status?: string,
   ) {
     return this.moderationService.getReports(status, page, limit);

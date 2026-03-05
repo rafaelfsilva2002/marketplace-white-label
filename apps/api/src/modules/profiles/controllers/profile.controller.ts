@@ -17,6 +17,7 @@ import {
   Headers,
 } from '@nestjs/common';
 import { ApiResponse } from '@marketplace/shared';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -46,8 +47,8 @@ export class ProfileController {
 
   @Get()
   async findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe, new ClampPipe(1, Infinity)) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
     @Query('city') city?: string,
     @Query('state') state?: string,
   ) {

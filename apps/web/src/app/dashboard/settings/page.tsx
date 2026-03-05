@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/api';
+import { api, getAccessToken, clearTokens } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,14 +63,13 @@ export default function SettingsPage() {
   // -------------------------------------------------------------------------
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!getAccessToken()) {
       setProfileLoading(false);
       return;
     }
 
     try {
-      const user = await api<UserProfile>('/auth/me', { token });
+      const user = await api<UserProfile>('/auth/me');
       setName(user.name ?? '');
       setEmail(user.email ?? '');
       setPhone(user.phone ?? '');
@@ -98,15 +97,13 @@ export default function SettingsPage() {
     setProfileMessage('');
     setProfileError('');
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setProfileSaving(true);
 
     try {
       await api('/auth/me', {
         method: 'PATCH',
-        token,
         body: JSON.stringify({ name, email, phone: phone || null }),
       });
       setProfileMessage('Dados atualizados com sucesso!');
@@ -140,15 +137,13 @@ export default function SettingsPage() {
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setPasswordSaving(true);
 
     try {
       await api('/auth/change-password', {
         method: 'POST',
-        token,
         body: JSON.stringify({
           currentPassword,
           newPassword,
@@ -184,18 +179,15 @@ export default function SettingsPage() {
     );
     if (!doubleConfirm) return;
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setDeleteLoading(true);
 
     try {
       await api('/auth/me', {
         method: 'DELETE',
-        token,
       });
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearTokens();
       window.location.href = '/';
     } catch (err) {
       alert(

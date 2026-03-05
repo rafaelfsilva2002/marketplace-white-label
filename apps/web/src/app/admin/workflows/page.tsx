@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 interface Workflow {
   id: string;
@@ -57,15 +57,12 @@ export default function WorkflowsPage() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-
   async function startWorkflow(name: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     setStarting(true);
     setError('');
     try {
       const result = await api<{ data: Workflow }>(`/workflows/${name}/start`, {
-        token,
         method: 'POST',
         body: JSON.stringify({ input: {} }),
       });
@@ -78,10 +75,10 @@ export default function WorkflowsPage() {
   }
 
   async function loadSteps(workflowId: string) {
-    if (!token) return;
+    if (!getAccessToken()) return;
     setSelectedWorkflow(workflowId);
     try {
-      const result = await api<{ data: WorkflowStep[] }>(`/workflows/${workflowId}/steps`, { token });
+      const result = await api<{ data: WorkflowStep[] }>(`/workflows/${workflowId}/steps`);
       setSteps(result.data);
     } catch {
       setSteps([]);
@@ -89,13 +86,13 @@ export default function WorkflowsPage() {
   }
 
   useEffect(() => {
-    if (!token) return;
+    if (!getAccessToken()) return;
     setLoading(true);
-    api<{ data: Workflow[] }>('/workflows', { token })
+    api<{ data: Workflow[] }>('/workflows')
       .then((res) => setWorkflows(res.data))
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   return (
     <div className="space-y-6">

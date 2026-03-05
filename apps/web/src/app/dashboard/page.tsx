@@ -87,21 +87,14 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   const fetchData = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const profileData = await api<Profile>('/profiles/me', { token });
+      const profileData = await api<Profile>('/profiles/me');
       setProfile(profileData);
 
       // Fetch recent reviews for this profile
       try {
         const reviewsData = await api<Review[]>(
           `/profiles/${profileData.id}/reviews?limit=5`,
-          { token },
         );
         setReviews(reviewsData);
       } catch {

@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtUser } from '@/modules/auth/strategies/jwt.strategy';
@@ -23,13 +24,11 @@ export class RecommendationController {
   @UseGuards(JwtAuthGuard)
   async getPersonalizedRecommendations(
     @CurrentUser() user: JwtUser,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe, new ClampPipe(1, 50)) limit: number,
   ) {
-    const clampedLimit = Math.min(Math.max(limit, 1), 50);
-
     const results = await this.recommendationService.getRecommendations(
       user.id,
-      clampedLimit,
+      limit,
     );
 
     return {
@@ -42,7 +41,7 @@ export class RecommendationController {
       meta: {
         userId: user.id,
         count: results.length,
-        limit: clampedLimit,
+        limit,
       },
     };
   }
@@ -50,13 +49,11 @@ export class RecommendationController {
   @Get('similar/:profileId')
   async getSimilarProfiles(
     @Param('profileId', ParseUUIDPipe) profileId: string,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe, new ClampPipe(1, 50)) limit: number,
   ) {
-    const clampedLimit = Math.min(Math.max(limit, 1), 50);
-
     const results = await this.recommendationService.getSimilarProfiles(
       profileId,
-      clampedLimit,
+      limit,
     );
 
     return {
@@ -69,7 +66,7 @@ export class RecommendationController {
       meta: {
         profileId,
         count: results.length,
-        limit: clampedLimit,
+        limit,
       },
     };
   }

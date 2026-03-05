@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,14 +147,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
+      if (!getAccessToken()) {
         setLoading(false);
         return;
       }
 
       try {
-        const data = await api<Profile>('/profiles/me', { token });
+        const data = await api<Profile>('/profiles/me');
         setProfile(data);
         setForm({
           displayName: data.displayName || '',
@@ -230,7 +229,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token || !profile) return;
 
     const maxSizeMB = 10;
@@ -302,8 +301,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
-    if (!token || !profile) return;
+    if (!getAccessToken() || !profile) return;
 
     setSaving(true);
     try {
@@ -328,7 +326,6 @@ export default function ProfilePage() {
 
       const updated = await api<Profile>(`/profiles/${profile.id}`, {
         method: 'PATCH',
-        token,
         body: JSON.stringify(payload),
       });
 

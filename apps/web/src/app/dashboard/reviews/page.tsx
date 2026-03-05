@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,17 +93,15 @@ export default function ReviewsPage() {
   // -------------------------------------------------------------------------
 
   const fetchProfileId = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return null;
+    if (!getAccessToken()) return null;
 
-    const profile = await api<{ id: string }>('/profiles/me', { token });
+    const profile = await api<{ id: string }>('/profiles/me');
     return profile.id;
   }, []);
 
   const fetchReviews = useCallback(
     async (pid: string, pageNum: number, append = false) => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!getAccessToken()) return;
 
       if (append) {
         setLoadingMore(true);
@@ -114,7 +112,6 @@ export default function ReviewsPage() {
         // We handle both formats gracefully.
         const raw = await api<ReviewsResponse | Review[]>(
           `/profiles/${pid}/reviews?page=${pageNum}&limit=${LIMIT}`,
-          { token },
         );
 
         let fetchedReviews: Review[];

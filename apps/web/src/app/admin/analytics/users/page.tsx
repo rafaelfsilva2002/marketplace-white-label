@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 import {
   SimpleBarChart,
   HorizontalBarChart,
@@ -145,7 +145,7 @@ export default function UserGrowthAnalyticsPage() {
   const [error, setError] = useState('');
 
   const getToken = useCallback(() => {
-    return localStorage.getItem('accessToken') || '';
+    return getAccessToken() || '';
   }, []);
 
   const fetchData = useCallback(async () => {

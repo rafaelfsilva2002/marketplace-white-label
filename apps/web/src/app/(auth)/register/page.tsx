@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { api, saveTokens } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,12 +42,10 @@ export default function RegisterPage() {
           email: form.email,
           password: form.password,
         }),
+        noAuth: true,
       });
 
-      localStorage.setItem('accessToken', result.accessToken);
-      localStorage.setItem('refreshToken', result.refreshToken);
-      // Set cookie so Next.js middleware can read the token for SSR
-      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=86400; SameSite=Lax`;
+      saveTokens(result.accessToken, result.refreshToken);
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');

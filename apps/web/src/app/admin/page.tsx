@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 /* ---------- Types ---------- */
 
@@ -219,17 +219,16 @@ export default function AdminDashboardPage() {
   const [usersError, setUsersError] = useState('');
 
   const getToken = useCallback(() => {
-    return localStorage.getItem('accessToken') || '';
+    return getAccessToken() || '';
   }, []);
 
   const fetchStats = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
+    if (!getToken()) return;
 
     setStatsLoading(true);
     setStatsError('');
     try {
-      const data = await api<AdminStats>('/admin/stats', { token });
+      const data = await api<AdminStats>('/admin/stats');
       setStats(data);
     } catch (err) {
       setStatsError(
@@ -241,13 +240,12 @@ export default function AdminDashboardPage() {
   }, [getToken]);
 
   const fetchRecentUsers = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
+    if (!getToken()) return;
 
     setUsersLoading(true);
     setUsersError('');
     try {
-      const data = await api<PaginatedUsers>('/admin/users?limit=5&offset=0', { token });
+      const data = await api<PaginatedUsers>('/admin/users?limit=5&offset=0');
       setRecentUsers(data.data);
     } catch (err) {
       setUsersError(

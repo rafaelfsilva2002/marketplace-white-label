@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { getAccessToken, clearTokens } from '@/lib/api';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Meu Perfil', icon: LayoutDashboard },
@@ -33,7 +34,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.replace('/login');
       return;
@@ -42,9 +43,7 @@ export default function DashboardLayout({
   }, [router]);
 
   function handleLogout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    document.cookie = 'accessToken=; path=/; max-age=0';
+    clearTokens();
     router.replace('/login');
   }
 

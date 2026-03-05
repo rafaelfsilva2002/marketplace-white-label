@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, getAccessToken } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,16 +136,13 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   const fetchSubscription = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!getAccessToken()) {
       setLoading(false);
       return;
     }
 
     try {
-      const data = await api<Subscription>('/subscriptions/current', {
-        token,
-      });
+      const data = await api<Subscription>('/subscriptions/current');
       setSubscription(data);
     } catch {
       // No active subscription — user is on free plan
@@ -164,8 +161,7 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   async function handleUpgrade(planId: string) {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     setActionLoading(planId);
     setActionMessage('');
@@ -173,7 +169,6 @@ export default function SubscriptionPage() {
     try {
       await api('/subscriptions/upgrade', {
         method: 'POST',
-        token,
         body: JSON.stringify({ planId }),
       });
       setActionMessage('Assinatura atualizada com sucesso!');
@@ -194,8 +189,7 @@ export default function SubscriptionPage() {
   // -------------------------------------------------------------------------
 
   async function handleCancel() {
-    const token = localStorage.getItem('accessToken');
-    if (!token || !subscription) return;
+    if (!getAccessToken() || !subscription) return;
 
     const confirmed = window.confirm(
       'Tem certeza que deseja cancelar sua assinatura? Voce ainda tera acesso ate o fim do periodo atual.',
@@ -208,7 +202,6 @@ export default function SubscriptionPage() {
     try {
       await api('/subscriptions/cancel', {
         method: 'POST',
-        token,
       });
       setActionMessage('Assinatura cancelada. Acesso mantido ate o fim do periodo.');
       await fetchSubscription();

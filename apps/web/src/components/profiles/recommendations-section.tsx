@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ProfileCard } from './profile-card';
+import { getAccessToken } from '@/lib/api';
 
 interface Profile {
   id: string;
@@ -29,7 +30,7 @@ export function RecommendationsSection({ profileId, title }: RecommendationsSect
   useEffect(() => {
     async function fetchRecommendations() {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const token = getAccessToken();
         const url = profileId
           ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/similar/${profileId}`
           : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/for-you`;
