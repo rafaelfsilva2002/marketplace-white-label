@@ -26,6 +26,7 @@ interface PresignedUrlResponse {
   uploadUrl: string;
   key: string;
   publicUrl: string;
+  cdnUrl: string;
 }
 
 @ApiTags('Uploads')
@@ -70,6 +71,7 @@ export class UploadController {
         uploadUrl: result.url,
         key: result.key,
         publicUrl: this.uploadService.buildPublicUrl(result.key),
+        cdnUrl: this.uploadService.getCdnUrl(result.key),
       },
     };
   }

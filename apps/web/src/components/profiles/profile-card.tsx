@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getOptimizedProfilePhoto } from '@/lib/cdn';
 
 interface ProfileCardProps {
   profile: {
@@ -22,12 +24,14 @@ export function ProfileCard({ profile }: ProfileCardProps) {
   return (
     <Link href={`/profiles/${profile.id}`}>
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-        <div className="aspect-[4/3] bg-muted">
+        <div className="relative aspect-[4/3] bg-muted">
           {profile.photos?.[0] ? (
-            <img
-              src={profile.photos[0]}
+            <Image
+              src={getOptimizedProfilePhoto(profile.photos[0], 'card')}
               alt={profile.displayName}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-4xl font-bold text-muted-foreground/30">

@@ -30,6 +30,8 @@ export const envSchema = z.object({
   S3_SECRET_KEY: z.string().optional(),
   S3_BUCKET: z.string().default('marketplace-uploads'),
 
+  CDN_URL: z.string().url().optional(),
+
   FRONTEND_URL: z.string().default('http://localhost:3000'),
 
   CORS_ORIGINS: z.string().optional(),

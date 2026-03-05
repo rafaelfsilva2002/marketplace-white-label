@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
+import { profileCategories } from './categories';
 
 const vector = customType<{
   data: number[];
@@ -82,7 +83,7 @@ export const profiles = pgTable(
   ],
 );
 
-export const profilesRelations = relations(profiles, ({ one }) => ({
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
   user: one(users, {
     fields: [profiles.userId],
     references: [users.id],
@@ -92,6 +93,7 @@ export const profilesRelations = relations(profiles, ({ one }) => ({
     references: [users.id],
     relationName: 'verifiedByUser',
   }),
+  profileCategories: many(profileCategories),
 }));
 
 export type Profile = typeof profiles.$inferSelect;

@@ -14,3 +14,4 @@ export * from './workflows';
 export * from './experiments';
 export * from './agents';
 export * from './reports';
+export * from './categories';

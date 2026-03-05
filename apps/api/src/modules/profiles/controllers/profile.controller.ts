@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { JwtUser } from '@/modules/auth/strategies/jwt.strategy';
+import { UploadService } from '@/modules/uploads/services/upload.service';
 import { ProfileService } from '../services/profile.service';
 import { ProfileViewsService } from '../services/profile-views.service';
 import { CreateProfileDto } from '../dto/create-profile.dto';
@@ -31,7 +32,17 @@ export class ProfileController {
   constructor(
     private readonly profileService: ProfileService,
     private readonly profileViewsService: ProfileViewsService,
+    private readonly uploadService: UploadService,
   ) {}
+
+  private transformPhotos<T extends { photos: string[] }>(
+    profile: T,
+  ): T {
+    return {
+      ...profile,
+      photos: this.uploadService.transformPhotosToCdn(profile.photos),
+    };
+  }
 
   @Get()
   async findAll(
@@ -40,7 +51,11 @@ export class ProfileController {
     @Query('city') city?: string,
     @Query('state') state?: string,
   ) {
-    return this.profileService.findAll(page, limit, city, state);
+    const result = await this.profileService.findAll(page, limit, city, state);
+    return {
+      ...result,
+      data: result.data.map((profile) => this.transformPhotos(profile)),
+    };
   }
 
   @Post()
@@ -73,7 +88,7 @@ export class ProfileController {
       source: 'api',
     });
 
-    return profile;
+    return this.transformPhotos(profile);
   }
 
   @Patch(':id')
@@ -84,7 +99,8 @@ export class ProfileController {
     @CurrentUser() user: JwtUser,
     @Req() req: { correlationId?: string },
   ) {
-    return this.profileService.update(id, dto, user.id, req.correlationId);
+    const profile = await this.profileService.update(id, dto, user.id, req.correlationId);
+    return this.transformPhotos(profile);
   }
 
   @Delete(':id')
@@ -113,7 +129,13 @@ export class ProfileController {
       user.id,
       headerCorrelationId,
     );
-    return { success: true, data: result };
+    return {
+      success: true,
+      data: {
+        ...result,
+        photos: this.uploadService.transformPhotosToCdn(result.photos),
+      },
+    };
   }
 
   @Post(':id/verify')
@@ -149,7 +171,10 @@ export class ProfileController {
 
     return {
       success: true,
-      data: result,
+      data: {
+        ...result,
+        photos: this.uploadService.transformPhotosToCdn(result.photos),
+      },
     };
   }
 

@@ -366,6 +366,56 @@
 
 **App Mobile: 15 telas, 12 componentes, 38 arquivos TypeScript/TSX**
 
+## Fase 14 — Internacionalizacao (i18n) ✓
+
+### Concluido
+- [x] 14.1 Translation files (pt-BR + en-US, 273 chaves cada)
+  - [x] Common, Auth, Home, Profile, Dashboard, Admin, Search, Errors, Footer
+- [x] 14.2 i18n utility (server-side `t()` + client-side `useTranslation()`)
+  - [x] Dot notation keys, variable interpolation `{{name}}`
+  - [x] Locale detection via cookie + Accept-Language header
+- [x] 14.3 I18nProvider context + LanguageSwitcher component
+- [x] 14.4 Middleware locale detection (sem quebrar auth middleware)
+
+## Fase 15 — Melhorias no Algoritmo de Recomendacao ✓
+
+### Concluido
+- [x] 15.1 Collaborative filtering (co-view matrix via profile_views)
+- [x] 15.2 Weighted scoring (5 sinais: embedding 0.4, rating 0.2, views 0.15, recency 0.1, location 0.15)
+- [x] 15.3 Diversity injection (20% de resultados de cidades/servicos diferentes)
+- [x] 15.4 Cold start handling (trending profiles dos ultimos 7 dias)
+- [x] 15.5 30 unit tests para scoring, recency, normalization, diversity, cold start
+
+## Fase 16 — CDN para Imagens ✓
+
+### Concluido
+- [x] 16.1 UploadService CDN methods (getCdnUrl, getImageUrl, getOptimizedProfilePhoto)
+  - [x] Preset sizes: thumbnail (80x80), card (400x300), full (1200x900) — all webp
+  - [x] CDN_URL env var (optional, fallback to S3 public URLs)
+- [x] 16.2 Environment validation (CDN_URL optional in Zod schema)
+- [x] 16.3 Upload controller retorna cdnUrl nas presigned responses
+- [x] 16.4 ProfileController transforma photos para CDN URLs
+- [x] 16.5 Frontend CDN utility (apps/web/src/lib/cdn.ts)
+- [x] 16.6 Next.js Image component com CDN + remote patterns
+- [x] 16.7 ProfileCard + Profile detail page usam imagens otimizadas
+
+## Fase 17 — Marketplace Multi-Categoria ✓
+
+### Concluido
+- [x] 17.1 Categories schema (categories + profile_categories many-to-many)
+  - [x] Hierarquia: parentId self-referencing FK para subcategorias
+- [x] 17.2 CategoriesModule (Service + Controller)
+  - [x] GET /categories — lista com subcategorias em arvore
+  - [x] GET /categories/:slug — por slug com profilesCount
+  - [x] GET /categories/:slug/profiles — profiles paginados
+  - [x] POST /categories — admin only
+  - [x] PATCH /categories/:id — admin only
+- [x] 17.3 Seed data: 8 categorias principais + 24 subcategorias
+- [x] 17.4 Frontend: /categories page (grid com icones) + /categories/[slug] (profiles)
+- [x] 17.5 Homepage: secao de categorias + link "Categorias" no nav
+
+**Total test count: ~285 tests (255 API + packages)**
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)

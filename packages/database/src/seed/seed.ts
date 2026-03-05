@@ -4,7 +4,7 @@ import { hash } from 'bcryptjs';
 import * as schema from '../schema';
 import type { Database } from '../index';
 
-const { users, profiles, reviews, subscriptions } = schema;
+const { users, profiles, reviews, subscriptions, categories, profileCategories } = schema;
 
 const SALT_ROUNDS = 10;
 const DEFAULT_PASSWORD = 'password123';
@@ -181,6 +181,119 @@ export async function seed(db: Database) {
     .returning();
 
   console.log(`  Inserted ${insertedSubscriptions.length} subscriptions`);
+
+  // --- 5. Categories ---
+  const [beleza, saude, educacao, tecnologia, consultoria, esportes, arte, servicosGerais] =
+    await db
+      .insert(categories)
+      .values([
+        {
+          name: 'Beleza',
+          slug: 'beleza',
+          description: 'Servicos de beleza, estetica e cuidados pessoais',
+          icon: 'Scissors',
+          sortOrder: 1,
+        },
+        {
+          name: 'Saude',
+          slug: 'saude',
+          description: 'Profissionais de saude, bem-estar e terapias',
+          icon: 'Heart',
+          sortOrder: 2,
+        },
+        {
+          name: 'Educacao',
+          slug: 'educacao',
+          description: 'Professores, tutores e instrutores',
+          icon: 'GraduationCap',
+          sortOrder: 3,
+        },
+        {
+          name: 'Tecnologia',
+          slug: 'tecnologia',
+          description: 'Desenvolvimento, design e servicos digitais',
+          icon: 'Monitor',
+          sortOrder: 4,
+        },
+        {
+          name: 'Consultoria',
+          slug: 'consultoria',
+          description: 'Consultores de negocios, financas e gestao',
+          icon: 'Briefcase',
+          sortOrder: 5,
+        },
+        {
+          name: 'Esportes',
+          slug: 'esportes',
+          description: 'Personal trainers, instrutores e treinadores',
+          icon: 'Dumbbell',
+          sortOrder: 6,
+        },
+        {
+          name: 'Arte',
+          slug: 'arte',
+          description: 'Artistas, musicos, fotografos e criativos',
+          icon: 'Palette',
+          sortOrder: 7,
+        },
+        {
+          name: 'Servicos Gerais',
+          slug: 'servicos-gerais',
+          description: 'Eletricistas, encanadores, manutencao e reparos',
+          icon: 'Wrench',
+          sortOrder: 8,
+        },
+      ])
+      .returning();
+
+  // Subcategories
+  await db.insert(categories).values([
+    // Beleza subcategories
+    { name: 'Cabeleireiro', slug: 'cabeleireiro', description: 'Cortes, coloracao e tratamentos capilares', icon: 'Scissors', parentId: beleza.id, sortOrder: 1 },
+    { name: 'Maquiagem', slug: 'maquiagem', description: 'Maquiagem profissional para eventos e ensaios', icon: 'Sparkles', parentId: beleza.id, sortOrder: 2 },
+    { name: 'Manicure e Pedicure', slug: 'manicure-pedicure', description: 'Cuidados com unhas e nail art', icon: 'Hand', parentId: beleza.id, sortOrder: 3 },
+    // Saude subcategories
+    { name: 'Fisioterapia', slug: 'fisioterapia', description: 'Reabilitacao e tratamentos fisioterapeuticos', icon: 'Activity', parentId: saude.id, sortOrder: 1 },
+    { name: 'Nutricao', slug: 'nutricao', description: 'Acompanhamento nutricional e dietas', icon: 'Apple', parentId: saude.id, sortOrder: 2 },
+    { name: 'Psicologia', slug: 'psicologia', description: 'Terapia e acompanhamento psicologico', icon: 'Brain', parentId: saude.id, sortOrder: 3 },
+    // Educacao subcategories
+    { name: 'Idiomas', slug: 'idiomas', description: 'Aulas de ingles, espanhol e outros idiomas', icon: 'Globe', parentId: educacao.id, sortOrder: 1 },
+    { name: 'Reforco Escolar', slug: 'reforco-escolar', description: 'Aulas particulares e reforco para estudantes', icon: 'BookOpen', parentId: educacao.id, sortOrder: 2 },
+    { name: 'Musica', slug: 'musica', description: 'Aulas de instrumentos e canto', icon: 'Music', parentId: educacao.id, sortOrder: 3 },
+    // Tecnologia subcategories
+    { name: 'Desenvolvimento Web', slug: 'desenvolvimento-web', description: 'Sites, aplicativos e sistemas web', icon: 'Code', parentId: tecnologia.id, sortOrder: 1 },
+    { name: 'Design Grafico', slug: 'design-grafico', description: 'Identidade visual, logos e materiais graficos', icon: 'Pen', parentId: tecnologia.id, sortOrder: 2 },
+    { name: 'Marketing Digital', slug: 'marketing-digital', description: 'SEO, redes sociais e publicidade online', icon: 'Megaphone', parentId: tecnologia.id, sortOrder: 3 },
+    // Consultoria subcategories
+    { name: 'Financeira', slug: 'consultoria-financeira', description: 'Planejamento financeiro e investimentos', icon: 'DollarSign', parentId: consultoria.id, sortOrder: 1 },
+    { name: 'Juridica', slug: 'consultoria-juridica', description: 'Assessoria legal e advocacia', icon: 'Scale', parentId: consultoria.id, sortOrder: 2 },
+    // Esportes subcategories
+    { name: 'Personal Trainer', slug: 'personal-trainer', description: 'Treinamento personalizado em academia ou domicilio', icon: 'Dumbbell', parentId: esportes.id, sortOrder: 1 },
+    { name: 'Yoga e Pilates', slug: 'yoga-pilates', description: 'Aulas de yoga, pilates e meditacao', icon: 'Flower', parentId: esportes.id, sortOrder: 2 },
+    { name: 'Artes Marciais', slug: 'artes-marciais', description: 'Jiu-jitsu, muay thai, karate e defesa pessoal', icon: 'Swords', parentId: esportes.id, sortOrder: 3 },
+    // Arte subcategories
+    { name: 'Fotografia', slug: 'fotografia', description: 'Ensaios, eventos e fotografia profissional', icon: 'Camera', parentId: arte.id, sortOrder: 1 },
+    { name: 'Musica e DJs', slug: 'musica-djs', description: 'Bandas, DJs e musicos para eventos', icon: 'Music', parentId: arte.id, sortOrder: 2 },
+    // Servicos Gerais subcategories
+    { name: 'Eletricista', slug: 'eletricista', description: 'Instalacoes e reparos eletricos', icon: 'Zap', parentId: servicosGerais.id, sortOrder: 1 },
+    { name: 'Encanador', slug: 'encanador', description: 'Instalacoes hidraulicas e reparos', icon: 'Wrench', parentId: servicosGerais.id, sortOrder: 2 },
+    { name: 'Pintura', slug: 'pintura', description: 'Pintura residencial e comercial', icon: 'PaintBucket', parentId: servicosGerais.id, sortOrder: 3 },
+  ]);
+
+  console.log(`  Inserted 8 main categories + 24 subcategories`);
+
+  // --- 6. Profile-Category associations ---
+  // Joao (Cabeleireiro) -> Beleza
+  await db.insert(profileCategories).values([
+    { profileId: profileJoao.id, categoryId: beleza.id },
+  ]);
+
+  // Maria (Personal Trainer) -> Esportes
+  await db.insert(profileCategories).values([
+    { profileId: profileMaria.id, categoryId: esportes.id },
+  ]);
+
+  console.log(`  Inserted 2 profile-category associations`);
 
   console.log('Seed completed successfully!');
 }

@@ -8,12 +8,28 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+export interface ImageTransformOptions {
+  width?: number;
+  height?: number;
+  quality?: number;
+  format?: 'webp' | 'avif' | 'jpeg';
+}
+
+const PROFILE_PHOTO_PRESETS = {
+  thumbnail: { width: 80, height: 80, quality: 70, format: 'webp' as const },
+  card: { width: 400, height: 300, quality: 80, format: 'webp' as const },
+  full: { width: 1200, height: 900, quality: 90, format: 'webp' as const },
+} as const;
+
+export type ProfilePhotoSize = keyof typeof PROFILE_PHOTO_PRESETS;
+
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
   private readonly s3: S3Client;
   private readonly bucket: string;
   private readonly endpoint: string;
+  private readonly cdnUrl: string | null;
 
   constructor(private readonly configService: ConfigService) {
     this.endpoint = this.configService.get<string>(
@@ -24,6 +40,7 @@ export class UploadService {
       'S3_BUCKET',
       'marketplace-uploads',
     );
+    this.cdnUrl = this.configService.get<string>('CDN_URL', '') || null;
 
     this.s3 = new S3Client({
       region: this.configService.get<string>('S3_REGION', 'us-east-1'),
@@ -39,6 +56,7 @@ export class UploadService {
       message: 'UploadService initialized',
       endpoint: this.endpoint,
       bucket: this.bucket,
+      cdnUrl: this.cdnUrl ?? 'not configured (using S3 public URL)',
     });
   }
 
@@ -101,5 +119,40 @@ export class UploadService {
 
   buildPublicUrl(key: string): string {
     return `${this.endpoint}/${this.bucket}/${key}`;
+  }
+
+  getCdnUrl(key: string): string {
+    if (this.cdnUrl) {
+      return `${this.cdnUrl}/${key}`;
+    }
+    return this.buildPublicUrl(key);
+  }
+
+  getImageUrl(key: string, options?: ImageTransformOptions): string {
+    const baseUrl = this.getCdnUrl(key);
+
+    if (!options) {
+      return baseUrl;
+    }
+
+    const params = new URLSearchParams();
+    if (options.width) params.set('w', String(options.width));
+    if (options.height) params.set('h', String(options.height));
+    if (options.quality) params.set('q', String(options.quality));
+    if (options.format) params.set('fmt', options.format);
+
+    const qs = params.toString();
+    return qs ? `${baseUrl}?${qs}` : baseUrl;
+  }
+
+  getOptimizedProfilePhoto(
+    key: string,
+    size: ProfilePhotoSize,
+  ): string {
+    return this.getImageUrl(key, PROFILE_PHOTO_PRESETS[size]);
+  }
+
+  transformPhotosToCdn(photos: string[]): string[] {
+    return photos.map((photo) => this.getCdnUrl(photo));
   }
 }

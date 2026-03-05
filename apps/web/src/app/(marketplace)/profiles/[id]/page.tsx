@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
-import { MapPin, Star, Shield, Clock, MessageCircle } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Star, Shield, Clock, MessageCircle, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RecommendationsSection } from '@/components/profiles/recommendations-section';
 import { api } from '@/lib/api';
+import { getOptimizedProfilePhoto } from '@/lib/cdn';
 
 interface Profile {
   id: string;
@@ -93,6 +95,33 @@ export default async function ProfilePage({ params }: PageProps) {
               </div>
             </div>
           </div>
+
+          {/* Photos */}
+          {profile.photos && profile.photos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Camera className="h-5 w-5" />
+                  Fotos ({profile.photos.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {profile.photos.map((photo, index) => (
+                    <div key={index} className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+                      <Image
+                        src={getOptimizedProfilePhoto(photo, index === 0 ? 'full' : 'card')}
+                        alt={`${profile.displayName} - foto ${index + 1}`}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Bio */}
           <Card>

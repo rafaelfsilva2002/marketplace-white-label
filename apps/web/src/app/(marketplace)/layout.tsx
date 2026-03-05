@@ -17,6 +17,12 @@ export default function MarketplaceLayout({
 
           <nav className="flex items-center gap-4">
             <Link
+              href="/categories"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Categorias
+            </Link>
+            <Link
               href="/search"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >

@@ -60,6 +60,7 @@ describe('ProfileController', () => {
   let controller: ProfileController;
   let mockProfileService: Record<string, ReturnType<typeof vi.fn>>;
   let mockProfileViewsService: Record<string, ReturnType<typeof vi.fn>>;
+  let mockUploadService: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     mockProfileService = {
@@ -75,9 +76,17 @@ describe('ProfileController', () => {
       getViewStats: vi.fn(),
     };
 
+    mockUploadService = {
+      transformPhotosToCdn: vi.fn((photos: string[]) => photos),
+      getCdnUrl: vi.fn((key: string) => key),
+      getImageUrl: vi.fn((key: string) => key),
+      getOptimizedProfilePhoto: vi.fn((key: string) => key),
+    };
+
     controller = new ProfileController(
       mockProfileService as any,
       mockProfileViewsService as any,
+      mockUploadService as any,
     );
   });
 

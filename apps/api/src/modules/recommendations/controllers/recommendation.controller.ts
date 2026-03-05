@@ -35,6 +35,7 @@ export class RecommendationController {
     return {
       results: results.map((r) => ({
         profile: r.profile,
+        score: r.score,
         similarity: r.similarity,
         reason: r.reason,
       })),
@@ -61,6 +62,7 @@ export class RecommendationController {
     return {
       results: results.map((r) => ({
         profile: r.profile,
+        score: r.score,
         similarity: r.similarity,
         reason: r.reason,
       })),
