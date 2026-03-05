@@ -487,7 +487,28 @@
 - [x] 22.5 Rate limiter Redis key TTL com safety margin (2x window)
 - [x] 22.6 Metrics periodic flush a cada 60s com graceful shutdown
 
-**Total test count: 371 tests (24 test files, all passing)**
+## Fase 23 — Quality & Resilience ✓
+
+### Concluido
+- [x] 23.1 Frontend auth token persistence
+  - [x] Centralized token storage (getAccessToken, saveTokens, clearTokens)
+  - [x] Auto-refresh on 401 with retry of original request
+  - [x] JWT expiry validation in middleware
+  - [x] Cookie max-age corrigido (16min vs 24h)
+  - [x] 20+ pages refactored para usar helpers centralizados
+- [x] 23.2 Stripe service retry logic (exponential backoff, transient-only)
+- [x] 23.3 Pagination validation (ClampPipe em 7 controllers, limit 1-100)
+- [x] 23.4 Audit log archival worker (90-day retention, weekly cron, batch processing)
+- [x] 23.5 101 novos unit tests
+  - [x] categories.service.spec.ts (21 testes)
+  - [x] upload.service.spec.ts (18 testes)
+  - [x] token.service.spec.ts (17 testes)
+  - [x] email.service.spec.ts (14 testes)
+  - [x] pricing.service.spec.ts (11 testes)
+  - [x] audit.service.spec.ts (11 testes)
+  - [x] profile-views.service.spec.ts (9 testes)
+
+**Total test count: 472 tests (31 test files, all passing)**
 **E2E test count: 55 Playwright tests (6 test files)**
 
 ## SDD Workflow
