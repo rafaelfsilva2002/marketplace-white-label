@@ -57,7 +57,8 @@ export function DashboardScreen({ navigation }: Props) {
               <CardContent>
                 <Button onPress={() => navigation.navigate('EditProfile', { id: profile.id })} className="mb-2">Editar Perfil</Button>
                 <Button variant="outline" onPress={() => navigation.navigate('MyReviews', { profileId: profile.id })} className="mb-2">Ver Avaliacoes</Button>
-                <Button variant="outline" onPress={() => navigation.navigate('Subscription')}>Minha Assinatura</Button>
+                <Button variant="outline" onPress={() => navigation.navigate('Subscription')} className="mb-2">Minha Assinatura</Button>
+                <Button variant="outline" onPress={() => navigation.navigate('Payment')}>Carteira / Pagamentos</Button>
               </CardContent>
             </Card>
           </>

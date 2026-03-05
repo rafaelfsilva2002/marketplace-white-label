@@ -6,17 +6,22 @@ import { UserRole } from '@marketplace/shared';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { SearchResultsScreen } from '@/screens/home/SearchResultsScreen';
 import { ProfileDetailScreen } from '@/screens/home/ProfileDetailScreen';
+import { BookingPaymentScreen } from '@/screens/home/BookingPaymentScreen';
 import { SemanticSearchScreen } from '@/screens/search/SemanticSearchScreen';
 import { DashboardScreen } from '@/screens/dashboard/DashboardScreen';
 import { EditProfileScreen } from '@/screens/dashboard/EditProfileScreen';
 import { MyReviewsScreen } from '@/screens/dashboard/MyReviewsScreen';
 import { SubscriptionScreen } from '@/screens/dashboard/SubscriptionScreen';
+import { PaymentScreen } from '@/screens/dashboard/PaymentScreen';
 import { SettingsScreen } from '@/screens/dashboard/SettingsScreen';
+import { ConversationListScreen } from '@/screens/chat/ConversationListScreen';
+import { ChatScreen } from '@/screens/chat/ChatScreen';
 
 export type HomeStackParamList = {
   Home: undefined;
   SearchResults: { q?: string; city?: string; service?: string };
   ProfileDetail: { id: string };
+  BookingPayment: { profileId: string; amount: number };
 };
 
 export type SearchStackParamList = {
@@ -25,11 +30,17 @@ export type SearchStackParamList = {
   ProfileDetail: { id: string };
 };
 
+export type ChatStackParamList = {
+  ConversationList: undefined;
+  Chat: { conversationId: string; participantName: string };
+};
+
 export type DashboardStackParamList = {
   Dashboard: undefined;
   EditProfile: { id: string };
   MyReviews: { profileId: string };
   Subscription: undefined;
+  Payment: undefined;
   Settings: undefined;
 };
 
@@ -44,6 +55,7 @@ function HomeStackScreen() {
       <HomeStackNav.Screen name="Home" component={HomeScreen} />
       <HomeStackNav.Screen name="SearchResults" component={SearchResultsScreen} />
       <HomeStackNav.Screen name="ProfileDetail" component={ProfileDetailScreen} />
+      <HomeStackNav.Screen name="BookingPayment" component={BookingPaymentScreen} />
     </HomeStackNav.Navigator>
   );
 }
@@ -59,6 +71,16 @@ function SearchStackScreen() {
   );
 }
 
+const ChatStackNav = createNativeStackNavigator<ChatStackParamList>();
+function ChatStackScreen() {
+  return (
+    <ChatStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <ChatStackNav.Screen name="ConversationList" component={ConversationListScreen} />
+      <ChatStackNav.Screen name="Chat" component={ChatScreen} />
+    </ChatStackNav.Navigator>
+  );
+}
+
 const DashboardStackNav = createNativeStackNavigator<DashboardStackParamList>();
 function DashboardStackScreen() {
   return (
@@ -67,6 +89,7 @@ function DashboardStackScreen() {
       <DashboardStackNav.Screen name="EditProfile" component={EditProfileScreen} />
       <DashboardStackNav.Screen name="MyReviews" component={MyReviewsScreen} />
       <DashboardStackNav.Screen name="Subscription" component={SubscriptionScreen} />
+      <DashboardStackNav.Screen name="Payment" component={PaymentScreen} />
       <DashboardStackNav.Screen name="Settings" component={SettingsScreen} />
     </DashboardStackNav.Navigator>
   );
@@ -93,12 +116,13 @@ export function MainTabs() {
 
   return (
     <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: '#dc2626', tabBarInactiveTintColor: '#737373' }}>
-      <Tab.Screen name="HomeTab" component={HomeStackScreen} options={{ tabBarLabel: 'Inicio', tabBarIcon: ({ focused }) => <TabIcon label="🏠" focused={focused} /> }} />
-      <Tab.Screen name="SearchTab" component={SearchStackScreen} options={{ tabBarLabel: 'Busca', tabBarIcon: ({ focused }) => <TabIcon label="🔍" focused={focused} /> }} />
+      <Tab.Screen name="HomeTab" component={HomeStackScreen} options={{ tabBarLabel: 'Inicio', tabBarIcon: ({ focused }) => <TabIcon label={'\ud83c\udfe0'} focused={focused} /> }} />
+      <Tab.Screen name="SearchTab" component={SearchStackScreen} options={{ tabBarLabel: 'Busca', tabBarIcon: ({ focused }) => <TabIcon label={'\ud83d\udd0d'} focused={focused} /> }} />
+      <Tab.Screen name="ChatTab" component={ChatStackScreen} options={{ tabBarLabel: 'Chat', tabBarIcon: ({ focused }) => <TabIcon label={'\ud83d\udcac'} focused={focused} /> }} />
       {isProfessional && (
-        <Tab.Screen name="DashboardTab" component={DashboardStackScreen} options={{ tabBarLabel: 'Painel', tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} /> }} />
+        <Tab.Screen name="DashboardTab" component={DashboardStackScreen} options={{ tabBarLabel: 'Painel', tabBarIcon: ({ focused }) => <TabIcon label={'\ud83d\udcca'} focused={focused} /> }} />
       )}
-      <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ tabBarLabel: 'Perfil', tabBarIcon: ({ focused }) => <TabIcon label="👤" focused={focused} /> }} />
+      <Tab.Screen name="ProfileTab" component={ProfileStackScreen} options={{ tabBarLabel: 'Perfil', tabBarIcon: ({ focused }) => <TabIcon label={'\ud83d\udc64'} focused={focused} /> }} />
     </Tab.Navigator>
   );
 }
