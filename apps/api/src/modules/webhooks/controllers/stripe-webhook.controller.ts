@@ -14,6 +14,7 @@ import { PaymentService } from '@/modules/payments/services/payment.service';
 import { StripeService } from '@/modules/payments/services/stripe.service';
 import { SubscriptionService } from '@/modules/subscriptions/services/subscription.service';
 import { AuditService } from '@/modules/audit/audit.service';
+import { WebhookRetryService } from '../services/webhook-retry.service';
 
 @Controller('webhooks')
 export class StripeWebhookController {
@@ -27,6 +28,7 @@ export class StripeWebhookController {
     private readonly stripeService: StripeService,
     private readonly subscriptionService: SubscriptionService,
     private readonly auditService: AuditService,
+    private readonly webhookRetryService: WebhookRetryService,
   ) {
     this.stripe = this.stripeService.getStripeInstance();
     this.webhookSecret = this.configService.getOrThrow<string>(
@@ -75,12 +77,21 @@ export class StripeWebhookController {
     try {
       await this.routeEvent(event);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error({
-        message: 'Error processing webhook event',
+        message: 'Error processing webhook event, scheduling retry',
         eventId: event.id,
         eventType: event.type,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       });
+
+      await this.webhookRetryService.scheduleRetry(
+        event.type,
+        event,
+        0,
+        event.id,
+        errorMessage,
+      );
     }
 
     return { received: true };

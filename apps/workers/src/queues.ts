@@ -8,6 +8,7 @@ export const QUEUE_NAMES = {
   NOTIFICATION: 'notification',
   REPORT_GENERATION: 'report-generation',
   AML_SCREENING: 'aml-screening',
+  WEBHOOK_RETRY: 'webhook-retry',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

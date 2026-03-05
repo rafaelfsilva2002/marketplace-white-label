@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import {
   Registry,
   collectDefaultMetrics,
@@ -7,8 +7,15 @@ import {
 } from 'prom-client';
 
 @Injectable()
-export class MetricsService implements OnModuleInit {
+export class MetricsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(MetricsService.name);
   private readonly registry: Registry;
+
+  /** Periodic flush timer reference — cleared on module destroy. */
+  private flushTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Default flush interval: 60 seconds. */
+  private static readonly FLUSH_INTERVAL_MS = 60_000;
 
   private readonly httpRequestsTotal: Counter<string>;
   private readonly httpRequestDuration: Histogram<string>;
@@ -58,6 +65,12 @@ export class MetricsService implements OnModuleInit {
 
   onModuleInit(): void {
     collectDefaultMetrics({ register: this.registry });
+    this.startFlushTimer();
+  }
+
+  onModuleDestroy(): void {
+    this.flush();
+    this.stopFlushTimer();
   }
 
   incrementHttpRequests(
@@ -106,5 +119,53 @@ export class MetricsService implements OnModuleInit {
 
   async getMetrics(): Promise<string> {
     return this.registry.metrics();
+  }
+
+  /**
+   * Flush buffered metrics snapshot to the structured logger.
+   * Idempotent — safe to call multiple times; logs only when
+   * there is data to report.
+   */
+  async flush(): Promise<void> {
+    try {
+      const metricsJson = await this.registry.getMetricsAsJSON();
+
+      if (!metricsJson || metricsJson.length === 0) {
+        return;
+      }
+
+      this.logger.log({
+        event: 'metrics.flush',
+        metricCount: metricsJson.length,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      this.logger.error({
+        message: 'Failed to flush metrics',
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  private startFlushTimer(): void {
+    this.flushTimer = setInterval(() => {
+      this.flush();
+    }, MetricsService.FLUSH_INTERVAL_MS);
+
+    // Allow Node.js to exit even if the timer is still active
+    if (
+      this.flushTimer &&
+      typeof this.flushTimer === 'object' &&
+      'unref' in this.flushTimer
+    ) {
+      this.flushTimer.unref();
+    }
+  }
+
+  private stopFlushTimer(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
   }
 }

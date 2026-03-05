@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, Optional } from '@nestjs/common';
 import { sql, eq, and, desc, notInArray, inArray } from 'drizzle-orm';
 import {
   profiles,
@@ -7,8 +7,10 @@ import {
   type Database,
 } from '@marketplace/database';
 import { DATABASE_TOKEN } from '@/config/database.config';
+import { REDIS_TOKEN } from '@/config/redis.config';
 import { StructuredLogger } from '@/common/logger/structured.logger';
 import { getCorrelationId } from '@/common/interceptors/correlation-id.interceptor';
+import type Redis from 'ioredis';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +53,12 @@ const DEFAULT_WEIGHTS: ScoringWeights = {
 const DIVERSITY_RATIO = 0.2;
 const TRENDING_WINDOW_DAYS = 7;
 const CO_VIEW_LIMIT = 50;
+
+/** Cache TTL for getRecommendations results (seconds) */
+const RECOMMENDATIONS_CACHE_TTL = 5 * 60; // 5 minutes
+
+/** Cache TTL for getSimilarProfiles results (seconds) */
+const SIMILAR_PROFILES_CACHE_TTL = 10 * 60; // 10 minutes
 
 // ---------------------------------------------------------------------------
 // Pure scoring functions (exported for testing)
@@ -167,6 +175,7 @@ export class RecommendationService {
 
   constructor(
     @Inject(DATABASE_TOKEN) private readonly db: Database,
+    @Optional() @Inject(REDIS_TOKEN) private readonly redis?: Redis,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -181,6 +190,51 @@ export class RecommendationService {
     const corrId = correlationId ?? getCorrelationId();
     const resultLimit = limit ?? RecommendationService.DEFAULT_LIMIT;
 
+    // --- Cache check ---
+    const cacheKey = `rec:user:${userId}`;
+    const cached = await this.getFromCache<RecommendationResult[]>(cacheKey);
+    if (cached) {
+      this.logger.logWithData(
+        'info',
+        'Returning cached recommendations',
+        { userId, cacheKey, correlationId: corrId },
+        'RecommendationService',
+      );
+      return cached.slice(0, resultLimit);
+    }
+
+    // --- Compute recommendations with error fallback ---
+    try {
+      const results = await this.computeRecommendations(userId, resultLimit, corrId);
+
+      // --- Cache the result ---
+      await this.setInCache(cacheKey, results, RECOMMENDATIONS_CACHE_TTL);
+
+      return results;
+    } catch (error) {
+      this.logger.logWithData(
+        'warn',
+        'Recommendation computation failed; falling back to top-rated profiles',
+        {
+          userId,
+          error: (error as Error).message,
+          correlationId: corrId,
+        },
+        'RecommendationService',
+      );
+      return this.getTopRatedProfiles(resultLimit, corrId);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Core recommendation computation (extracted for caching/fallback)
+  // -------------------------------------------------------------------------
+
+  private async computeRecommendations(
+    userId: string,
+    resultLimit: number,
+    corrId: string,
+  ): Promise<RecommendationResult[]> {
     const recentViews = await this.db
       .select({ profileId: profileViews.profileId })
       .from(profileViews)
@@ -291,6 +345,56 @@ export class RecommendationService {
     const correlationId = getCorrelationId();
     const resultLimit = limit ?? RecommendationService.DEFAULT_LIMIT;
 
+    // --- Cache check ---
+    const cacheKey = `rec:similar:${profileId}`;
+    const cached = await this.getFromCache<RecommendationResult[]>(cacheKey);
+    if (cached) {
+      this.logger.logWithData(
+        'info',
+        'Returning cached similar profiles',
+        { profileId, cacheKey, correlationId },
+        'RecommendationService',
+      );
+      return cached.slice(0, resultLimit);
+    }
+
+    // --- Compute similar profiles with error fallback ---
+    try {
+      const results = await this.computeSimilarProfiles(profileId, resultLimit, correlationId);
+
+      // --- Cache the result ---
+      await this.setInCache(cacheKey, results, SIMILAR_PROFILES_CACHE_TTL);
+
+      return results;
+    } catch (error) {
+      // Re-throw NotFoundException -- it's not a computation failure, it's a client error
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      this.logger.logWithData(
+        'warn',
+        'Similar profiles computation failed; falling back to top-rated profiles',
+        {
+          profileId,
+          error: (error as Error).message,
+          correlationId,
+        },
+        'RecommendationService',
+      );
+      return this.getTopRatedProfiles(resultLimit, correlationId, [profileId]);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Core similar profiles computation (extracted for caching/fallback)
+  // -------------------------------------------------------------------------
+
+  private async computeSimilarProfiles(
+    profileId: string,
+    resultLimit: number,
+    correlationId: string,
+  ): Promise<RecommendationResult[]> {
     const [profile] = await this.db
       .select({
         id: profiles.id,
@@ -606,5 +710,42 @@ export class RecommendationService {
     }
 
     return maxCity;
+  }
+
+  // -------------------------------------------------------------------------
+  // Redis cache helpers
+  // -------------------------------------------------------------------------
+
+  private async getFromCache<T>(key: string): Promise<T | null> {
+    if (!this.redis) return null;
+
+    try {
+      const raw = await this.redis.get(key);
+      if (!raw) return null;
+      return JSON.parse(raw) as T;
+    } catch (error) {
+      this.logger.logWithData(
+        'warn',
+        'Redis cache read failed; proceeding without cache',
+        { key, error: (error as Error).message },
+        'RecommendationService',
+      );
+      return null;
+    }
+  }
+
+  private async setInCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    if (!this.redis) return;
+
+    try {
+      await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+    } catch (error) {
+      this.logger.logWithData(
+        'warn',
+        'Redis cache write failed; result not cached',
+        { key, ttlSeconds, error: (error as Error).message },
+        'RecommendationService',
+      );
+    }
   }
 }

@@ -5,6 +5,7 @@ import { AuditService } from '@/modules/audit/audit.service';
 import { PaymentsModule } from '@/modules/payments/payments.module';
 import { SubscriptionsModule } from '@/modules/subscriptions/subscriptions.module';
 import { StripeWebhookController } from './controllers/stripe-webhook.controller';
+import { WebhookRetryService } from './services/webhook-retry.service';
 import type { Database } from '@marketplace/database';
 
 @Module({
@@ -17,6 +18,8 @@ import type { Database } from '@marketplace/database';
       useFactory: (db: Database) => new AuditService(db),
       inject: [DATABASE_TOKEN],
     },
+    WebhookRetryService,
   ],
+  exports: [WebhookRetryService],
 })
 export class WebhooksModule {}

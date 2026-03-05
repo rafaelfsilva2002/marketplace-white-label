@@ -113,13 +113,18 @@ export class RateLimitGuard implements CanActivate, OnModuleDestroy {
 
     const pipeline = this.redis.pipeline();
 
+    // Remove entries outside the current sliding window
     pipeline.zremrangebyscore(key, '-inf', String(windowStart));
 
+    // Add current request as a new entry scored by timestamp
     pipeline.zadd(key, String(now), `${now}:${Math.random()}`);
 
+    // Count entries within the window
     pipeline.zcard(key);
 
-    pipeline.pexpire(key, this.config.windowMs);
+    // Set TTL with 2x safety margin so keys auto-expire even if the
+    // client disappears and zremrangebyscore never runs again.
+    pipeline.pexpire(key, this.config.windowMs * 2);
 
     const results = await pipeline.exec();
 

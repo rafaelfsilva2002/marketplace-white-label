@@ -29,6 +29,7 @@ describe('StripeWebhookController', () => {
   let mockSubscriptionService: Record<string, ReturnType<typeof vi.fn>>;
   let mockAuditService: Record<string, ReturnType<typeof vi.fn>>;
   let mockConfigService: Record<string, ReturnType<typeof vi.fn>>;
+  let mockWebhookRetryService: Record<string, ReturnType<typeof vi.fn>>;
   let mockStripeInstance: {
     webhooks: { constructEvent: ReturnType<typeof vi.fn> };
   };
@@ -61,12 +62,17 @@ describe('StripeWebhookController', () => {
       getOrThrow: vi.fn().mockReturnValue('whsec_test_secret'),
     };
 
+    mockWebhookRetryService = {
+      scheduleRetry: vi.fn().mockResolvedValue(undefined),
+    };
+
     controller = new StripeWebhookController(
       mockConfigService as any,
       mockPaymentService as any,
       mockStripeService as any,
       mockSubscriptionService as any,
       mockAuditService as any,
+      mockWebhookRetryService as any,
     );
   });
 
@@ -115,7 +121,7 @@ describe('StripeWebhookController', () => {
       expect(result).toEqual({ received: true });
     });
 
-    it('should return { received: true } even when handler throws', async () => {
+    it('should return { received: true } even when handler throws and schedule retry', async () => {
       const event = createMockStripeEvent('payment_intent.succeeded', {
         id: 'pi_123',
         amount: 1000,
@@ -135,6 +141,13 @@ describe('StripeWebhookController', () => {
       );
 
       expect(result).toEqual({ received: true });
+      expect(mockWebhookRetryService.scheduleRetry).toHaveBeenCalledWith(
+        'payment_intent.succeeded',
+        event,
+        0,
+        'evt_test_123',
+        'DB error',
+      );
     });
   });
 
