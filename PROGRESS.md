@@ -438,7 +438,30 @@
   - [x] Sub-pages: /admin/analytics/revenue, /admin/analytics/users
   - [x] Admin layout + nav link atualizado
 
-**Total test count: ~285 tests (255 API + packages)**
+## Fase 19 — Mobile Chat/Payments + Testes Phase 18 ✓
+
+### Concluido
+- [x] 19.1 Mobile Chat Screens
+  - [x] ConversationListScreen (FlatList, pull-to-refresh, unread badges, 10s polling)
+  - [x] ChatScreen (inverted FlatList, 3s polling, mark-as-read, KeyboardAvoidingView)
+  - [x] ConversationItem component (avatar, last message, timestamp, unread badge)
+  - [x] Chat tab adicionado ao MainTabs (entre Search e Dashboard)
+- [x] 19.2 Stripe Mobile Payments
+  - [x] payments.ts service (wallet, payment intents, subscriptions, idempotency keys)
+  - [x] PaymentScreen (wallet balance, add funds, transaction history)
+  - [x] BookingPaymentScreen (multi-step: review → processing → success/error)
+  - [x] SubscriptionScreen reescrito (4 planos, upgrade/downgrade, cancel)
+  - [x] DashboardScreen atualizado com link para Carteira
+  - [x] MainTabs atualizado (BookingPayment + Payment routes)
+- [x] 19.3 Testes Unitarios Phase 18 (114 novos testes)
+  - [x] chat.service.spec.ts (20 testes)
+  - [x] chat.controller.spec.ts (19 testes)
+  - [x] chat.gateway.spec.ts (21 testes)
+  - [x] push-notification.service.spec.ts (16 testes)
+  - [x] analytics.service.spec.ts (16 testes)
+  - [x] analytics.controller.spec.ts (19 testes)
+
+**Total test count: 369 tests (24 test files, all passing)**
 
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
