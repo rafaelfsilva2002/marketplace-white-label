@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Shield, LayoutDashboard, Eye, Users, LogOut, GitBranch, Bot, FlaskConical } from 'lucide-react';
+import { Shield, LayoutDashboard, Eye, Users, LogOut, GitBranch, Bot, FlaskConical, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/moderation', label: 'Moderacao', icon: Eye },
   { href: '/admin/usuarios', label: 'Usuarios', icon: Users },
   { href: '/admin/workflows', label: 'Workflows', icon: GitBranch },

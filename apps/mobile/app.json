@@ -20,8 +20,18 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.marketplace.ftm"
+      "package": "com.marketplace.ftm",
+      "useNextNotificationsApi": true
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
     "scheme": "marketplace"
   }
 }

@@ -414,6 +414,30 @@
 - [x] 17.4 Frontend: /categories page (grid com icones) + /categories/[slug] (profiles)
 - [x] 17.5 Homepage: secao de categorias + link "Categorias" no nav
 
+## Fase 18 — Chat, Push Notifications, Analytics ✓
+
+### Concluido
+- [x] 18.1 Chat em tempo real (Socket.IO + REST fallback)
+  - [x] conversations + messages schema (Drizzle)
+  - [x] ChatService (getOrCreateConversation, getConversations, getMessages, sendMessage, markAsRead, getUnreadCount)
+  - [x] ChatGateway Socket.IO /chat namespace (join_conversation, send_message, typing, mark_read)
+  - [x] ChatController REST endpoints
+  - [x] Frontend: /chat page com ConversationList, MessageBubble, ChatInput, typing indicator
+  - [x] socket.io-client integrado no web app
+- [x] 18.2 Push Notifications (Expo Push API)
+  - [x] push_tokens schema (Drizzle)
+  - [x] PushNotificationService (registerToken, removeToken, sendPushNotification, sendBulkPush)
+  - [x] NotificationController: POST/DELETE /notifications/push-token
+  - [x] Worker: Channel 4 (Expo push) no notification.worker.ts
+  - [x] Mobile: usePushNotifications hook (permissions, token registration, foreground/background handling)
+  - [x] PushNotificationInitializer component no App.tsx
+- [x] 18.3 Analytics Dashboard (Admin)
+  - [x] AnalyticsService (revenue, userGrowth, profiles, search, categories, moderation, overview)
+  - [x] AnalyticsController (7 admin-only endpoints)
+  - [x] Frontend: /admin/analytics dashboard com SimpleBarChart (pure CSS)
+  - [x] Sub-pages: /admin/analytics/revenue, /admin/analytics/users
+  - [x] Admin layout + nav link atualizado
+
 **Total test count: ~285 tests (255 API + packages)**
 
 ## SDD Workflow

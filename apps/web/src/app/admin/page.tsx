@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertCircle,
   UserCheck,
+  BarChart3,
 } from 'lucide-react';
 import {
   Card,
@@ -177,6 +178,13 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => vo
 /* ---------- Quick Links ---------- */
 
 const QUICK_LINKS = [
+  {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    description: 'Metricas detalhadas da plataforma',
+    icon: BarChart3,
+    color: 'text-emerald-500',
+  },
   {
     href: '/admin/moderation',
     label: 'Ver Fila de Moderacao',

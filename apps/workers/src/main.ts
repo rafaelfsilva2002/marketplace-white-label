@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   workers.push(sentimentAnalysisWorker);
   console.log(JSON.stringify({ level: 'info', message: 'Sentiment analysis worker registered' }));
 
-  const notificationWorker = createNotificationWorker();
+  const notificationWorker = createNotificationWorker(db);
   workers.push(notificationWorker);
   console.log(JSON.stringify({ level: 'info', message: 'Notification worker registered' }));
 

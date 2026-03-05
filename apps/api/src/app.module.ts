@@ -22,6 +22,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
     NotificationsModule,
     UploadsModule,
     CategoriesModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

@@ -1,5 +1,8 @@
 import { Worker, Job } from 'bullmq';
 import { QUEUE_NAMES, createRedisConnection } from '../queues';
+import type { Database } from '@marketplace/database';
+import { pushTokens } from '@marketplace/database';
+import { eq, and } from 'drizzle-orm';
 
 export type NotificationType =
   | 'payment.succeeded'
@@ -202,10 +205,117 @@ function buildNotificationPayload(data: NotificationJobData): NotificationPayloa
 }
 
 // ---------------------------------------------------------------------------
+// Expo Push Notification helper
+// ---------------------------------------------------------------------------
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+
+async function sendExpoPush(
+  db: Database,
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+  correlationId?: string,
+): Promise<void> {
+  try {
+    const tokens = await db
+      .select({ token: pushTokens.token })
+      .from(pushTokens)
+      .where(
+        and(
+          eq(pushTokens.userId, userId),
+          eq(pushTokens.isActive, true),
+        ),
+      );
+
+    if (tokens.length === 0) {
+      console.log(
+        JSON.stringify({
+          level: 'debug',
+          message: 'No active push tokens for user',
+          correlationId,
+          userId,
+          channel: 'push',
+        }),
+      );
+      return;
+    }
+
+    const messages = tokens.map(({ token }) => ({
+      to: token,
+      title,
+      body,
+      data,
+      sound: 'default' as const,
+      priority: 'high' as const,
+    }));
+
+    const response = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    if (!response.ok) {
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          message: `Expo Push API returned ${response.status}`,
+          correlationId,
+          userId,
+          channel: 'push',
+        }),
+      );
+      return;
+    }
+
+    const result = await response.json() as { data: Array<{ status: string; details?: Record<string, string> }> };
+
+    // Deactivate invalid tokens
+    for (let i = 0; i < result.data.length; i++) {
+      const ticket = result.data[i];
+      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+        await db
+          .update(pushTokens)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(pushTokens.token, messages[i].to));
+      }
+    }
+
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        message: `Push notifications sent to ${tokens.length} device(s)`,
+        correlationId,
+        userId,
+        channel: 'push',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  } catch (error) {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        message: 'Expo push notification failed (non-fatal)',
+        correlationId,
+        userId,
+        channel: 'push',
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Job processor
 // ---------------------------------------------------------------------------
 async function processNotificationJob(
   job: Job<NotificationJobData>,
+  db: Database,
 ): Promise<void> {
   const { type, userId, email, correlationId } = job.data;
 
@@ -295,17 +405,29 @@ async function processNotificationJob(
       console.log(JSON.stringify({ level: 'warn', message: 'WebSocket push failed', error: String(err) }));
     }
   }
+
+  // --- Channel 4: Expo Push Notification ---
+  if (userId) {
+    await sendExpoPush(
+      db,
+      userId,
+      payload.title,
+      payload.body,
+      { type: payload.type, ...payload.metadata },
+      correlationId,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Worker factory
 // ---------------------------------------------------------------------------
-export function createNotificationWorker(): Worker<NotificationJobData> {
+export function createNotificationWorker(db: Database): Worker<NotificationJobData> {
   const connection = createRedisConnection();
 
   const worker = new Worker<NotificationJobData>(
     QUEUE_NAMES.NOTIFICATION,
-    async (job) => processNotificationJob(job),
+    async (job) => processNotificationJob(job, db),
     {
       connection,
       concurrency: 10,

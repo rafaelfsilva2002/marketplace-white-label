@@ -29,6 +29,12 @@ export default function MarketplaceLayout({
               Buscar
             </Link>
             <Link
+              href="/chat"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Chat
+            </Link>
+            <Link
               href="/dashboard"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
