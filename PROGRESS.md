@@ -316,6 +316,56 @@
   - [x] POST /profiles/:id/photos (add photos with ownership check)
   - [x] POST /profiles/:id/verify (request verification, outbox event)
 
+## Fase 13 — App Mobile (Expo/React Native) ✓
+
+### Concluido
+- [x] 13.1 Scaffold Expo project no monorepo (apps/mobile)
+  - [x] package.json, app.json, tsconfig.json, babel.config.js, metro.config.js
+  - [x] Monorepo-aware metro config (watchFolders, nodeModulesPaths)
+- [x] 13.2 NativeWind + Theme
+  - [x] tailwind.config.js com cores primary/background/muted/border
+  - [x] global.css, nativewind-env.d.ts, babel preset
+  - [x] theme.ts (colors, spacing), utils.ts (formatCurrency, formatDate, formatRelativeTime)
+- [x] 13.3 API Client + Secure Storage
+  - [x] storage.ts (expo-secure-store wrapper)
+  - [x] api.ts (fetch wrapper, auto JWT inject, 401 token refresh, ApiError class)
+  - [x] Unit test para ApiError
+- [x] 13.4 Auth Context + Hooks
+  - [x] AuthContext.tsx (AuthProvider, useAuth — login, register, logout, refreshUser)
+  - [x] useApi.ts (useApiQuery, useApiPaginated, useApiMutation com TanStack Query)
+- [x] 13.5 UI Components (12 componentes)
+  - [x] Button (4 variants), Input (label + error), Card (+ Header/Content)
+  - [x] Badge (5 variants), Avatar (image + initials fallback), StarRating (interactive)
+  - [x] Skeleton (animated pulse), LoadingScreen
+  - [x] ProfileCard, ReviewItem, SearchBar (debounced)
+- [x] 13.6 Navigation Structure
+  - [x] AuthStack (Login, Register, ForgotPassword, ResetPassword)
+  - [x] MainTabs (Home, Search, Dashboard, Profile) com nested stacks
+  - [x] AdminStack (AdminStats, AdminModeration)
+  - [x] Deep linking (marketplace:// + https://)
+  - [x] RootNavigator (auth state → AuthStack | MainTabs | AdminStack)
+- [x] 13.7 Auth Screens (4 telas)
+  - [x] LoginScreen (email + senha, zod validation)
+  - [x] RegisterScreen (nome, email, senha, role selector Client/Professional)
+  - [x] ForgotPasswordScreen (email input, success state)
+  - [x] ResetPasswordScreen (token deep link, nova senha + confirmacao)
+- [x] 13.8 Home + Search Screens (4 telas)
+  - [x] HomeScreen (search bar + featured profiles FlatList + pull-to-refresh)
+  - [x] SearchResultsScreen (search results with filters)
+  - [x] ProfileDetailScreen (photo carousel, bio, services, reviews)
+  - [x] SemanticSearchScreen (natural language search via POST /search/semantic)
+- [x] 13.9 Dashboard Screens (5 telas)
+  - [x] DashboardScreen (stats cards + quick actions)
+  - [x] EditProfileScreen (form com PATCH mutation)
+  - [x] MyReviewsScreen (reviews FlatList com sentiment badges)
+  - [x] SubscriptionScreen (3 plans comparison, upgrade/downgrade)
+  - [x] SettingsScreen (account info, change password, logout, delete account)
+- [x] 13.10 Admin Screens (2 telas)
+  - [x] AdminStatsScreen (stat cards: users, profiles, moderation, subscriptions)
+  - [x] AdminModerationScreen (queue with approve/reject actions)
+
+**App Mobile: 15 telas, 12 componentes, 38 arquivos TypeScript/TSX**
+
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
 - [x] Spec criada (.claude/specs/marketplace-ai-native/)
