@@ -461,7 +461,34 @@
   - [x] analytics.service.spec.ts (16 testes)
   - [x] analytics.controller.spec.ts (19 testes)
 
-**Total test count: 369 tests (24 test files, all passing)**
+## Fase 20 — README + E2E Tests ✓
+
+### Concluido
+- [x] 20.1 README.md (pt-BR, setup completo, arquitetura, 23 modulos documentados)
+- [x] 20.2 Playwright E2E Tests (55 testes: homepage, auth, search, categories, admin)
+
+## Fase 21 — Security Hardening + Infrastructure ✓
+
+### Concluido
+- [x] 21.1 Fix RBAC guard faltante no POST /notifications/push (vulnerabilidade)
+- [x] 21.2 Replace console.log com NestJS Logger no HttpExceptionFilter
+- [x] 21.3 Drizzle migrations completas (38 tabelas, 31 enums, 139 indexes)
+- [x] 21.4 Shared types expandidos (17 domain types, 17 enums, API response envelopes)
+- [x] 21.5 AML Screening Worker reescrito (screen-user, screen-transaction, periodic-rescreen)
+- [x] 21.6 Structured JSON logger para workers
+
+## Fase 22 — Infrastructure Hardening ✓
+
+### Concluido
+- [x] 22.1 Webhook retry queue com exponential backoff (5 retries + dead letter)
+- [x] 22.2 DB connection pool config (max 20, idle 30s, connect timeout 5s)
+- [x] 22.3 Redis caching para recommendations (5min user, 10min similar profiles)
+- [x] 22.4 Top-rated profiles fallback quando recommendations falham
+- [x] 22.5 Rate limiter Redis key TTL com safety margin (2x window)
+- [x] 22.6 Metrics periodic flush a cada 60s com graceful shutdown
+
+**Total test count: 371 tests (24 test files, all passing)**
+**E2E test count: 55 Playwright tests (6 test files)**
 
 ## SDD Workflow
 - [x] Steering documents criados (.claude/steering/)
