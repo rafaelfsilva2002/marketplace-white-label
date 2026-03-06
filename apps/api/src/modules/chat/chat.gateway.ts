@@ -10,12 +10,7 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-
-interface JwtPayload {
-  sub: string;
-  email: string;
-  role: string;
-}
+import { TokenService } from '@/modules/auth/services/token.service';
 
 @WebSocketGateway({
   cors: {
@@ -31,10 +26,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly tokenService: TokenService,
+  ) {}
 
-  handleConnection(client: Socket) {
-    const userId = this.extractUserId(client);
+  async handleConnection(client: Socket) {
+    const userId = await this.extractUserId(client);
     if (!userId) {
       this.logger.warn(`Unauthorized connection attempt: ${client.id}`);
       client.disconnect();
@@ -170,15 +168,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private extractUserId(client: Socket): string | null {
+  private async extractUserId(client: Socket): Promise<string | null> {
     const token =
       client.handshake.auth?.token ||
       client.handshake.headers?.authorization?.replace('Bearer ', '');
     if (!token) return null;
     try {
-      const payload: JwtPayload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString(),
-      );
+      const payload = await this.tokenService.verifyAccessToken(token);
       return payload.sub;
     } catch {
       return null;

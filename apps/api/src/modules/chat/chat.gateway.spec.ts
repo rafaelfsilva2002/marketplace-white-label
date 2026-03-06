@@ -25,17 +25,9 @@ const FAKE_MESSAGE = {
   createdAt: new Date('2026-03-01'),
 };
 
-function createFakeJwtToken(payload: { sub: string; email: string; role: string }): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64');
-  return `${header}.${body}.fake-signature`;
-}
-
 function createMockSocket(overrides: Record<string, unknown> = {}): any {
   const userId = (overrides as any).userId;
-  const token = userId
-    ? createFakeJwtToken({ sub: userId as string, email: 'test@example.com', role: 'user' })
-    : undefined;
+  const token = userId ? `valid-token-for-${userId}` : undefined;
 
   return {
     id: overrides.id ?? 'socket-1',
@@ -66,6 +58,7 @@ function createMockServer(): any {
 describe('ChatGateway', () => {
   let gateway: ChatGateway;
   let mockChatService: Record<string, ReturnType<typeof vi.fn>>;
+  let mockTokenService: Record<string, ReturnType<typeof vi.fn>>;
   let mockServer: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
@@ -77,7 +70,18 @@ describe('ChatGateway', () => {
       markAsRead: vi.fn(),
     };
 
-    gateway = new ChatGateway(mockChatService as any);
+    mockTokenService = {
+      verifyAccessToken: vi.fn().mockImplementation((token: string) => {
+        // Tokens created by createMockSocket follow the pattern "valid-token-for-<userId>"
+        const match = token.match(/^valid-token-for-(.+)$/);
+        if (match) {
+          return Promise.resolve({ sub: match[1], email: 'test@example.com', role: 'user' });
+        }
+        return Promise.reject(new Error('Invalid or expired access token'));
+      }),
+    };
+
+    gateway = new ChatGateway(mockChatService as any, mockTokenService as any);
     mockServer = createMockServer();
     gateway.server = mockServer;
   });
@@ -87,52 +91,52 @@ describe('ChatGateway', () => {
   // -------------------------------------------------------------------------
 
   describe('handleConnection', () => {
-    it('should register the socket and join user room when token is valid', () => {
+    it('should register the socket and join user room when token is valid', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
 
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       expect(client.data.userId).toBe('user-aaa');
       expect(client.join).toHaveBeenCalledWith('user:user-aaa');
       expect(client.disconnect).not.toHaveBeenCalled();
     });
 
-    it('should disconnect client when no token is provided', () => {
+    it('should disconnect client when no token is provided', async () => {
       const client = createMockSocket({ authToken: undefined });
       client.handshake.auth = {};
       client.handshake.headers = {};
 
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       expect(client.disconnect).toHaveBeenCalled();
     });
 
-    it('should disconnect client when token is invalid', () => {
+    it('should disconnect client when token is invalid', async () => {
       const client = createMockSocket({ authToken: 'not-a-jwt' });
 
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       expect(client.disconnect).toHaveBeenCalled();
     });
 
-    it('should support token from authorization header', () => {
-      const token = createFakeJwtToken({ sub: 'user-from-header', email: 'h@test.com', role: 'user' });
+    it('should support token from authorization header', async () => {
+      const token = 'valid-token-for-user-from-header';
       const client = createMockSocket({ authToken: undefined });
       client.handshake.auth = {};
       client.handshake.headers = { authorization: `Bearer ${token}` };
 
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       expect(client.data.userId).toBe('user-from-header');
       expect(client.join).toHaveBeenCalledWith('user:user-from-header');
     });
 
-    it('should allow multiple sockets for the same user', () => {
+    it('should allow multiple sockets for the same user', async () => {
       const client1 = createMockSocket({ id: 'socket-1', userId: 'user-aaa' });
       const client2 = createMockSocket({ id: 'socket-2', userId: 'user-aaa' });
 
-      gateway.handleConnection(client1);
-      gateway.handleConnection(client2);
+      await gateway.handleConnection(client1);
+      await gateway.handleConnection(client2);
 
       expect(client1.join).toHaveBeenCalledWith('user:user-aaa');
       expect(client2.join).toHaveBeenCalledWith('user:user-aaa');
@@ -144,9 +148,9 @@ describe('ChatGateway', () => {
   // -------------------------------------------------------------------------
 
   describe('handleDisconnect', () => {
-    it('should remove the socket from tracking', () => {
+    it('should remove the socket from tracking', async () => {
       const client = createMockSocket({ id: 'socket-1', userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       gateway.handleDisconnect(client);
 
@@ -170,7 +174,7 @@ describe('ChatGateway', () => {
   describe('handleJoinConversation', () => {
     it('should join the conversation room when user is a participant', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.getConversationById.mockResolvedValue(FAKE_CONVERSATION);
 
@@ -184,7 +188,7 @@ describe('ChatGateway', () => {
 
     it('should emit error when user is not a participant', async () => {
       const client = createMockSocket({ userId: 'user-stranger' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.getConversationById.mockResolvedValue(FAKE_CONVERSATION);
 
@@ -197,7 +201,7 @@ describe('ChatGateway', () => {
 
     it('should emit error when conversation is not found', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.getConversationById.mockRejectedValue(
         new Error('Not found'),
@@ -227,7 +231,7 @@ describe('ChatGateway', () => {
   describe('handleSendMessage', () => {
     it('should send message and emit to conversation room', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.sendMessage.mockResolvedValue(FAKE_MESSAGE);
       mockChatService.getConversationById.mockResolvedValue(FAKE_CONVERSATION);
@@ -249,7 +253,7 @@ describe('ChatGateway', () => {
 
     it('should use specified message type', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.sendMessage.mockResolvedValue(FAKE_MESSAGE);
       mockChatService.getConversationById.mockResolvedValue(FAKE_CONVERSATION);
@@ -270,7 +274,7 @@ describe('ChatGateway', () => {
 
     it('should emit error when sendMessage fails', async () => {
       const client = createMockSocket({ userId: 'user-aaa' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.sendMessage.mockRejectedValue(
         new Error('Not a participant'),
@@ -308,7 +312,7 @@ describe('ChatGateway', () => {
       const toEmit = vi.fn();
       const client = createMockSocket({ userId: 'user-aaa' });
       client.to = vi.fn().mockReturnValue({ emit: toEmit });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       await gateway.handleTyping(client, {
         conversationId: 'conv-uuid-1',
@@ -327,7 +331,7 @@ describe('ChatGateway', () => {
       const toEmit = vi.fn();
       const client = createMockSocket({ userId: 'user-aaa' });
       client.to = vi.fn().mockReturnValue({ emit: toEmit });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       await gateway.handleTyping(client, {
         conversationId: 'conv-uuid-1',
@@ -361,7 +365,7 @@ describe('ChatGateway', () => {
   describe('handleMarkRead', () => {
     it('should mark messages as read and emit to conversation room', async () => {
       const client = createMockSocket({ userId: 'user-bbb' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.markAsRead.mockResolvedValue({ markedCount: 3 });
 
@@ -376,7 +380,7 @@ describe('ChatGateway', () => {
 
     it('should emit error when markAsRead fails', async () => {
       const client = createMockSocket({ userId: 'user-bbb' });
-      gateway.handleConnection(client);
+      await gateway.handleConnection(client);
 
       mockChatService.markAsRead.mockRejectedValue(new Error('Failed'));
 

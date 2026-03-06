@@ -4,10 +4,8 @@ import {
   MinLength,
   MaxLength,
   IsOptional,
-  IsEnum,
   Matches,
 } from 'class-validator';
-import { UserRole } from '@marketplace/shared';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Must be a valid email address' })
@@ -33,10 +31,4 @@ export class RegisterDto {
     message: 'Phone must be a valid E.164 number',
   })
   phone?: string;
-
-  @IsOptional()
-  @IsEnum(UserRole, {
-    message: `Role must be one of: ${Object.values(UserRole).join(', ')}`,
-  })
-  role?: UserRole;
 }

@@ -103,7 +103,7 @@ export default function ChatPage() {
     });
 
     newSocket.on('connect', () => {
-      console.log('Chat socket connected');
+      // Connection established — no action needed
     });
 
     newSocket.on('new_message', (message: MessageItem) => {
@@ -158,7 +158,7 @@ export default function ChatPage() {
     });
 
     newSocket.on('disconnect', () => {
-      console.log('Chat socket disconnected');
+      // Disconnected — reconnection handled by socket.io automatically
     });
 
     setSocket(newSocket);

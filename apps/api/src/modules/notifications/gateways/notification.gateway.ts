@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { TokenService } from '@/modules/auth/services/token.service';
 
 @WebSocketGateway({
   cors: {
@@ -23,8 +24,10 @@ export class NotificationGateway
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
-    const userId = this.extractUserId(client);
+  constructor(private readonly tokenService: TokenService) {}
+
+  async handleConnection(client: Socket) {
+    const userId = await this.extractUserId(client);
     if (!userId) {
       client.disconnect();
       return;
@@ -34,12 +37,13 @@ export class NotificationGateway
       this.userSockets.set(userId, new Set());
     }
     this.userSockets.get(userId)!.add(client.id);
+    client.data.userId = userId;
     client.join(`user:${userId}`);
     this.logger.log(`Client connected: ${client.id} (user: ${userId})`);
   }
 
   handleDisconnect(client: Socket) {
-    const userId = this.extractUserId(client);
+    const userId = client.data.userId;
     if (userId && this.userSockets.has(userId)) {
       this.userSockets.get(userId)!.delete(client.id);
       if (this.userSockets.get(userId)!.size === 0) {
@@ -61,15 +65,13 @@ export class NotificationGateway
     return this.userSockets.size;
   }
 
-  private extractUserId(client: Socket): string | null {
+  private async extractUserId(client: Socket): Promise<string | null> {
     const token =
       client.handshake.auth?.token ||
       client.handshake.headers?.authorization?.replace('Bearer ', '');
     if (!token) return null;
     try {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString(),
-      );
+      const payload = await this.tokenService.verifyAccessToken(token);
       return payload.sub;
     } catch {
       return null;

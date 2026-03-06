@@ -4,8 +4,10 @@ import { NotificationGateway } from './gateways/notification.gateway';
 import { EmailService } from './services/email.service';
 import { PushNotificationService } from './services/push-notification.service';
 import { DatabaseProvider } from '@/config/database.config';
+import { AuthModule } from '@/modules/auth/auth.module';
 
 @Module({
+  imports: [AuthModule],
   controllers: [NotificationController],
   providers: [DatabaseProvider, NotificationGateway, EmailService, PushNotificationService],
   exports: [NotificationGateway, EmailService, PushNotificationService],

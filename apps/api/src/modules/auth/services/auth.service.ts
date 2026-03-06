@@ -52,7 +52,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const role = dto.role ?? UserRole.User;
+    const role = UserRole.User;
 
     const [newUser] = await this.db
       .insert(users)

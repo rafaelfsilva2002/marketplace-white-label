@@ -31,7 +31,6 @@ import { SolanaAdapter } from '../adapters/solana.adapter';
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
-const SALT = 'marketplace-crypto-salt';
 
 export interface SendPaymentParams {
   walletId: string;
@@ -70,11 +69,23 @@ export class CryptoService {
       ['solana', this.solanaAdapter],
     ]);
 
-    const secret = this.configService.get<string>(
-      'CRYPTO_ENCRYPTION_SECRET',
-      'default-secret-change-in-production-32chars!',
-    );
-    this.encryptionKey = scryptSync(secret, SALT, 32);
+    const secret = this.configService.get<string>('CRYPTO_ENCRYPTION_SECRET');
+    if (!secret) {
+      throw new Error(
+        'CRYPTO_ENCRYPTION_SECRET environment variable is required but not set. ' +
+        'The application cannot start without a valid encryption secret.',
+      );
+    }
+
+    const salt = this.configService.get<string>('CRYPTO_ENCRYPTION_SALT');
+    if (!salt) {
+      throw new Error(
+        'CRYPTO_ENCRYPTION_SALT environment variable is required but not set. ' +
+        'The application cannot start without a valid encryption salt.',
+      );
+    }
+
+    this.encryptionKey = scryptSync(secret, salt, 32);
   }
 
   async createWallet(
