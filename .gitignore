@@ -34,6 +34,8 @@ npm-debug.log*
 
 # Test
 coverage/
+apps/web/playwright-report/
+apps/web/test-results/
 
 # Docker
 docker-compose.override.yml

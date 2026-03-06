@@ -4,11 +4,14 @@ import {
   Post,
   Body,
   Param,
+  Query,
   Inject,
   UseGuards,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  ParseIntPipe,
+  DefaultValuePipe,
   NotFoundException,
   BadRequestException,
   Headers,
@@ -18,6 +21,7 @@ import { eq, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { workflows, workflowSteps, type Database } from '@marketplace/database';
 import { DATABASE_TOKEN } from '@/config/database.config';
+import { ClampPipe } from '@/common/pipes/clamp.pipe';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -43,6 +47,39 @@ export class WorkflowController {
     private readonly workflowEngine: WorkflowEngineService,
     @Inject(DATABASE_TOKEN) private readonly db: Database,
   ) {}
+
+  @Get()
+  async listWorkflows(
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe, new ClampPipe(1, 100)) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe, new ClampPipe(0, Infinity)) offset: number,
+  ): Promise<ApiResponse<WorkflowStatusResult[]>> {
+    const rows = await this.db
+      .select()
+      .from(workflows)
+      .orderBy(desc(workflows.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const data: WorkflowStatusResult[] = rows.map((workflow) => ({
+      id: workflow.id,
+      name: workflow.name,
+      status: workflow.status,
+      input: workflow.input,
+      output: workflow.output,
+      error: workflow.error,
+      startedAt: workflow.startedAt,
+      completedAt: workflow.completedAt,
+      correlationId: workflow.correlationId,
+      metadata: workflow.metadata,
+      createdAt: workflow.createdAt,
+      updatedAt: workflow.updatedAt,
+    }));
+
+    return {
+      success: true,
+      data,
+    };
+  }
 
   @Post(':name/start')
   @HttpCode(HttpStatus.CREATED)

@@ -168,8 +168,12 @@ describe('ChatService', () => {
       const convsChain = createFluentChain([FAKE_CONVERSATION]);
       // 3. other user query
       const userChain = createFluentChain([FAKE_USER]);
-      // 4. unread count query
-      const unreadChain = createFluentChain([{ unread: 3 }]);
+      // 4. unread rows query (3 unread messages for the same conversation)
+      const unreadChain = createFluentChain([
+        { conversationId: FAKE_CONVERSATION.id },
+        { conversationId: FAKE_CONVERSATION.id },
+        { conversationId: FAKE_CONVERSATION.id },
+      ]);
 
       mockDb.select
         .mockReturnValueOnce({ from: countChain.from })
@@ -184,8 +188,8 @@ describe('ChatService', () => {
       expect(result.limit).toBe(20);
       expect(result.totalPages).toBe(1);
       expect(result.data).toHaveLength(1);
-      expect(result.data[0]).toHaveProperty('otherParticipant');
-      expect(result.data[0]).toHaveProperty('unreadCount');
+      expect(result.data[0].otherParticipant).toEqual(FAKE_USER);
+      expect(result.data[0].unreadCount).toBe(3);
     });
 
     it('should return empty data when no conversations exist', async () => {
@@ -214,6 +218,87 @@ describe('ChatService', () => {
       const result = await service.getConversations('user-aaa', 1, 10);
 
       expect(result.totalPages).toBe(3);
+    });
+
+    it('should aggregate unread rows by conversation and deduplicate participant lookup', async () => {
+      const conv1 = {
+        ...FAKE_CONVERSATION,
+        id: 'conv-1',
+        participantOneId: 'user-aaa',
+        participantTwoId: 'user-bbb',
+      };
+      const conv2 = {
+        ...FAKE_CONVERSATION,
+        id: 'conv-2',
+        participantOneId: 'user-bbb',
+        participantTwoId: 'user-aaa',
+      };
+
+      const countChain = createFluentChain([{ total: 2 }]);
+      const convsChain = createFluentChain([conv1, conv2]);
+      const usersChain = createFluentChain([FAKE_USER]);
+      const unreadRowsChain = createFluentChain([
+        { conversationId: 'conv-1' },
+        { conversationId: 'conv-1' },
+        { conversationId: 'conv-2' },
+      ]);
+
+      mockDb.select
+        .mockReturnValueOnce({ from: countChain.from })
+        .mockReturnValueOnce({ from: convsChain.from })
+        .mockReturnValueOnce({ from: usersChain.from })
+        .mockReturnValueOnce({ from: unreadRowsChain.from });
+
+      const result = await service.getConversations('user-aaa', 1, 20);
+
+      const first = result.data.find((item) => item.id === 'conv-1');
+      const second = result.data.find((item) => item.id === 'conv-2');
+
+      expect(first?.unreadCount).toBe(2);
+      expect(second?.unreadCount).toBe(1);
+      expect(first?.otherParticipant).toEqual(FAKE_USER);
+      expect(second?.otherParticipant).toEqual(FAKE_USER);
+      expect(mockDb.select).toHaveBeenCalledTimes(4);
+    });
+
+    it('should skip user/unread queries when there are no conversations in page', async () => {
+      const countChain = createFluentChain([{ total: 0 }]);
+      const convsChain = createFluentChain([]);
+
+      mockDb.select
+        .mockReturnValueOnce({ from: countChain.from })
+        .mockReturnValueOnce({ from: convsChain.from });
+
+      const result = await service.getConversations('user-aaa', 1, 20);
+
+      expect(result.data).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+    });
+
+    it('should default unreadCount to 0 and otherParticipant to null when not found', async () => {
+      const conv = {
+        ...FAKE_CONVERSATION,
+        id: 'conv-3',
+        participantOneId: 'user-aaa',
+        participantTwoId: 'user-missing',
+      };
+
+      const countChain = createFluentChain([{ total: 1 }]);
+      const convsChain = createFluentChain([conv]);
+      const usersChain = createFluentChain([]);
+      const unreadRowsChain = createFluentChain([]);
+
+      mockDb.select
+        .mockReturnValueOnce({ from: countChain.from })
+        .mockReturnValueOnce({ from: convsChain.from })
+        .mockReturnValueOnce({ from: usersChain.from })
+        .mockReturnValueOnce({ from: unreadRowsChain.from });
+
+      const result = await service.getConversations('user-aaa', 1, 20);
+
+      expect(result.data[0].unreadCount).toBe(0);
+      expect(result.data[0].otherParticipant).toBeNull();
     });
   });
 

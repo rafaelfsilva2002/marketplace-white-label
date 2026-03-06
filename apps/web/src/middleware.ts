@@ -1,12 +1,106 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/search', '/profiles'];
+const PUBLIC_EXACT_PATHS = [
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/search',
+  '/profiles',
+  '/categories',
+];
+const PUBLIC_PREFIX_PATHS = ['/profiles/', '/categories/'];
 const ADMIN_PATHS = ['/admin'];
 
 // --- i18n locale detection ---
 const SUPPORTED_LOCALES = ['pt-BR', 'en-US'];
 const DEFAULT_LOCALE = 'pt-BR';
+const JWT_ALGORITHM = 'HS256';
+
+type JwtPayload = {
+  sub?: string;
+  role?: string;
+  exp?: number;
+};
+
+function base64UrlToUint8Array(base64Url: string): Uint8Array {
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
+function base64UrlDecode(base64Url: string): string {
+  return new TextDecoder().decode(base64UrlToUint8Array(base64Url));
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  if (bytes.buffer instanceof ArrayBuffer) {
+    return bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    );
+  }
+
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+async function verifyJwtSignature(
+  token: string,
+  secret: string,
+): Promise<JwtPayload | null> {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [headerPart, payloadPart, signaturePart] = parts;
+
+  let header: { alg?: string };
+  let payload: JwtPayload;
+
+  try {
+    header = JSON.parse(base64UrlDecode(headerPart)) as { alg?: string };
+    payload = JSON.parse(base64UrlDecode(payloadPart)) as JwtPayload;
+  } catch {
+    return null;
+  }
+
+  if (header.alg !== JWT_ALGORITHM) {
+    return null;
+  }
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+
+  const isValid = await crypto.subtle.verify(
+    'HMAC',
+    key,
+    toArrayBuffer(base64UrlToUint8Array(signaturePart)),
+    toArrayBuffer(new TextEncoder().encode(`${headerPart}.${payloadPart}`)),
+  );
+
+  if (!isValid) {
+    return null;
+  }
+
+  return payload;
+}
 
 function detectLocale(request: NextRequest): string {
   // 1. Check cookie
@@ -37,16 +131,20 @@ function detectLocale(request: NextRequest): string {
   return DEFAULT_LOCALE;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // --- i18n: set locale cookie if not present ---
   const hasLocaleCookie = request.cookies.has('locale');
   const locale = detectLocale(request);
 
+  const isPublicPath =
+    PUBLIC_EXACT_PATHS.includes(pathname) ||
+    PUBLIC_PREFIX_PATHS.some((prefix) => pathname.startsWith(prefix));
+
   // Allow public paths and static files
   if (
-    PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith('/profiles/')) ||
+    isPublicPath ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.')
@@ -81,15 +179,19 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Decode and validate JWT (expiry + role for admin paths).
-  // The middleware only performs basic checks — the API server does full verification.
-  let payload: { sub?: string; role?: string; exp?: number };
-  try {
-    payload = JSON.parse(
-      Buffer.from(token.split('.')[1], 'base64').toString('utf-8'),
-    );
-  } catch {
-    // Malformed token — clear the stale cookie and redirect to login
+  // Validate JWT signature and decode payload.
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete('accessToken');
+    return response;
+  }
+
+  const payload = await verifyJwtSignature(token, jwtSecret);
+  if (!payload) {
+    // Invalid token — clear the stale cookie and redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     const response = NextResponse.redirect(loginUrl);

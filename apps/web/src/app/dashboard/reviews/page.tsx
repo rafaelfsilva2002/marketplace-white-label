@@ -21,7 +21,8 @@ interface Review {
   id: string;
   rating: number;
   comment: string | null;
-  authorName: string;
+  authorName?: string;
+  reviewerId?: string;
   sentiment?: 'positive' | 'neutral' | 'negative';
   createdAt: string;
 }
@@ -111,7 +112,7 @@ export default function ReviewsPage() {
         // The endpoint may return an array directly or a paginated wrapper.
         // We handle both formats gracefully.
         const raw = await api<ReviewsResponse | Review[]>(
-          `/profiles/${pid}/reviews?page=${pageNum}&limit=${LIMIT}`,
+          `/reviews/profile/${pid}?page=${pageNum}&limit=${LIMIT}`,
         );
 
         let fetchedReviews: Review[];
@@ -125,10 +126,15 @@ export default function ReviewsPage() {
           fetchedTotal = raw.total;
         }
 
+        const normalized = fetchedReviews.map((review) => ({
+          ...review,
+          authorName: review.authorName ?? review.reviewerId ?? 'Cliente',
+        }));
+
         if (append) {
-          setReviews((prev) => [...prev, ...fetchedReviews]);
+          setReviews((prev) => [...prev, ...normalized]);
         } else {
-          setReviews(fetchedReviews);
+          setReviews(normalized);
         }
         setTotal(fetchedTotal);
       } catch (err) {

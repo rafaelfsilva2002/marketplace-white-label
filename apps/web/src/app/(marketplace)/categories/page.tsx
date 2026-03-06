@@ -70,7 +70,7 @@ export default async function CategoriesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="min-h-[1px] grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {categories.map((category) => (
           <Link key={category.id} href={`/categories/${category.slug}`}>
             <Card className="h-full transition-shadow hover:shadow-lg">

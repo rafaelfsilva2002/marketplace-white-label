@@ -37,9 +37,13 @@ interface CategorySummary {
 
 // Server Component — fetches data at request time
 export default async function HomePage() {
-  const { data: featuredProfiles } = await api<PaginatedProfiles>(
-    '/profiles?limit=6',
-  );
+  let featuredProfiles: Profile[] = [];
+  try {
+    const response = await api<PaginatedProfiles>('/profiles?limit=6');
+    featuredProfiles = response.data ?? [];
+  } catch {
+    // fallback to empty
+  }
 
   let categoriesList: CategorySummary[] = [];
   try {

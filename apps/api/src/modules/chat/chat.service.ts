@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { eq, and, or, desc, count, sql } from 'drizzle-orm';
+import { eq, and, or, desc, count, sql, inArray } from 'drizzle-orm';
 import {
   conversations,
   messages,
@@ -94,39 +94,61 @@ export class ChatService {
       .limit(limit)
       .offset(offset);
 
-    // Fetch participant info for each conversation
-    const enriched = await Promise.all(
-      data.map(async (conv) => {
-        const otherUserId =
+    const otherUserIds = Array.from(
+      new Set(
+        data.map((conv) =>
           conv.participantOneId === userId
             ? conv.participantTwoId
-            : conv.participantOneId;
-
-        const [otherUser] = await this.db
-          .select({ id: users.id, name: users.name, email: users.email })
-          .from(users)
-          .where(eq(users.id, otherUserId))
-          .limit(1);
-
-        // Count unread messages in this conversation
-        const [unreadResult] = await this.db
-          .select({ unread: count() })
-          .from(messages)
-          .where(
-            and(
-              eq(messages.conversationId, conv.id),
-              eq(messages.isRead, false),
-              sql`${messages.senderId} != ${userId}`,
-            ),
-          );
-
-        return {
-          ...conv,
-          otherParticipant: otherUser || null,
-          unreadCount: unreadResult?.unread ?? 0,
-        };
-      }),
+            : conv.participantOneId,
+        ),
+      ),
     );
+
+    const conversationIds = data.map((conv) => conv.id);
+
+    const [otherUsers, unreadRows] = await Promise.all([
+      otherUserIds.length > 0
+        ? this.db
+            .select({ id: users.id, name: users.name, email: users.email })
+            .from(users)
+            .where(inArray(users.id, otherUserIds))
+        : Promise.resolve([]),
+      conversationIds.length > 0
+        ? this.db
+            .select({ conversationId: messages.conversationId })
+            .from(messages)
+            .where(
+              and(
+                inArray(messages.conversationId, conversationIds),
+                eq(messages.isRead, false),
+                sql`${messages.senderId} != ${userId}`,
+              ),
+            )
+        : Promise.resolve([]),
+    ]);
+
+    const usersById = new Map(otherUsers.map((user) => [user.id, user]));
+    const unreadCountByConversationId = new Map<string, number>();
+
+    for (const row of unreadRows) {
+      unreadCountByConversationId.set(
+        row.conversationId,
+        (unreadCountByConversationId.get(row.conversationId) ?? 0) + 1,
+      );
+    }
+
+    const enriched = data.map((conv) => {
+      const otherUserId =
+        conv.participantOneId === userId
+          ? conv.participantTwoId
+          : conv.participantOneId;
+
+      return {
+        ...conv,
+        otherParticipant: usersById.get(otherUserId) ?? null,
+        unreadCount: unreadCountByConversationId.get(conv.id) ?? 0,
+      };
+    });
 
     return {
       data: enriched,

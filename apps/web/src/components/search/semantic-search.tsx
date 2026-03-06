@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Search, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useDebounce } from '@/hooks/use-debounce';
-import Link from 'next/link';
+import { api, extractApiData } from '@/lib/api';
 
 interface SemanticResult {
   id: string;
@@ -17,6 +18,16 @@ interface SemanticResult {
   services?: string[];
   averageRating?: number;
   similarity?: number;
+}
+
+interface SemanticSearchResponse {
+  results: Omit<SemanticResult, 'similarity'>[];
+  meta?: {
+    query: string;
+    mode: 'semantic';
+    count: number;
+    similarities?: number[];
+  };
 }
 
 export function SemanticSearch() {
@@ -37,32 +48,38 @@ export function SemanticSearch() {
     async function search() {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/search/semantic`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ query: debouncedQuery }),
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setResults(data.results || []);
-          setShowDropdown(true);
-        }
+        const raw = await api<
+          SemanticSearchResponse | { success: boolean; data: SemanticSearchResponse }
+        >('/search/semantic', {
+          method: 'POST',
+          body: JSON.stringify({ query: debouncedQuery }),
+          noAuth: true,
+        });
+
+        const data = extractApiData<SemanticSearchResponse>(raw);
+        const normalized: SemanticResult[] = data.results.map((profile, index) => ({
+          ...profile,
+          similarity: data.meta?.similarities?.[index],
+        }));
+        setResults(normalized);
+        setShowDropdown(true);
       } catch {
-        console.error('Semantic search failed');
+        setResults([]);
+        setShowDropdown(false);
       } finally {
         setLoading(false);
       }
     }
 
-    search();
+    void search();
   }, [debouncedQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     }
@@ -74,7 +91,7 @@ export function SemanticSearch() {
     <div ref={containerRef} className="relative w-full">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Sparkles className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-500" />
+          <Sparkles className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
           <Input
             type="text"
             placeholder="Busque em linguagem natural... ex: 'quero alguem pra cortar cabelo estilo coreano'"
@@ -91,19 +108,19 @@ export function SemanticSearch() {
       </div>
 
       {loading && showDropdown && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-2 p-4 bg-background rounded-lg border shadow-lg">
+        <div className="absolute top-full left-0 right-0 z-50 mt-2 rounded-lg border bg-background p-4 shadow-lg">
           <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary" />
             <span className="text-sm text-muted-foreground">Buscando com IA...</span>
           </div>
         </div>
       )}
 
       {!loading && showDropdown && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-background rounded-lg border shadow-lg max-h-96 overflow-y-auto">
-          <div className="p-2 border-b">
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-purple-500" />
+        <div className="absolute top-full left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border bg-background shadow-lg">
+          <div className="border-b p-2">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Sparkles className="h-3 w-3 text-primary" />
               {results.length} resultado{results.length !== 1 ? 's' : ''} por busca semantica
             </span>
           </div>
@@ -112,14 +129,14 @@ export function SemanticSearch() {
               key={profile.id}
               href={`/profiles/${profile.id}`}
               onClick={() => setShowDropdown(false)}
-              className="flex items-start gap-3 p-3 hover:bg-muted/50 transition-colors border-b last:border-0"
+              className="flex items-start gap-3 border-b p-3 transition-colors hover:bg-muted/50 last:border-0"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground/50">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground/50">
                 {profile.displayName.charAt(0)}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm truncate">{profile.displayName}</span>
+                  <span className="truncate text-sm font-medium">{profile.displayName}</span>
                   {profile.similarity && (
                     <Badge variant="secondary" className="text-xs">
                       {Math.round(profile.similarity * 100)}% match
@@ -127,13 +144,13 @@ export function SemanticSearch() {
                   )}
                 </div>
                 {profile.bio && (
-                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{profile.bio}</p>
+                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{profile.bio}</p>
                 )}
                 {profile.services && profile.services.length > 0 && (
-                  <div className="flex gap-1 mt-1">
-                    {profile.services.slice(0, 3).map((s) => (
-                      <Badge key={s} variant="outline" className="text-[10px] px-1 py-0">
-                        {s}
+                  <div className="mt-1 flex gap-1">
+                    {profile.services.slice(0, 3).map((service) => (
+                      <Badge key={service} variant="outline" className="px-1 py-0 text-[10px]">
+                        {service}
                       </Badge>
                     ))}
                   </div>

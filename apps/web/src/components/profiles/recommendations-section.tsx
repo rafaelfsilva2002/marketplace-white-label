@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ProfileCard } from './profile-card';
-import { getAccessToken } from '@/lib/api';
+import { api, extractApiData, getAccessToken } from '@/lib/api';
 
 interface Profile {
   id: string;
@@ -23,28 +23,51 @@ interface RecommendationsSectionProps {
   title?: string;
 }
 
+interface RecommendationResult {
+  profile: Profile;
+  score?: number;
+  similarity?: number;
+  reason?: string;
+}
+
+interface RecommendationResponse {
+  results: RecommendationResult[];
+  meta?: {
+    count: number;
+    limit: number;
+  };
+}
+
 export function RecommendationsSection({ profileId, title }: RecommendationsSectionProps) {
   const [recommendations, setRecommendations] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = getAccessToken();
+    if (!profileId && !token) {
+      setLoading(false);
+      setRecommendations([]);
+      return;
+    }
+
     async function fetchRecommendations() {
       try {
-        const token = getAccessToken();
-        const url = profileId
-          ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/similar/${profileId}`
-          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/recommendations/for-you`;
+        const path = profileId
+          ? `/recommendations/similar/${profileId}`
+          : '/recommendations/for-you';
 
-        const response = await fetch(url, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const raw = await api<
+          RecommendationResponse | { success: boolean; data: RecommendationResponse }
+        >(path, { noAuth: !token });
 
-        if (response.ok) {
-          const data = await response.json();
-          setRecommendations(data.results || data || []);
-        }
+        const data = extractApiData<RecommendationResponse>(raw);
+        const profiles = data.results
+          .map((item) => item.profile)
+          .filter(Boolean);
+        setRecommendations(profiles);
       } catch {
         // Silently fail — recommendations are not critical
+        setRecommendations([]);
       } finally {
         setLoading(false);
       }
@@ -57,7 +80,7 @@ export function RecommendationsSection({ profileId, title }: RecommendationsSect
     return (
       <section className="mt-12">
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-500" />
+          <Sparkles className="h-5 w-5 text-primary" />
           {title || 'Recomendados para Voce'}
         </h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -74,7 +97,7 @@ export function RecommendationsSection({ profileId, title }: RecommendationsSect
   return (
     <section className="mt-12">
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-purple-500" />
+        <Sparkles className="h-5 w-5 text-primary" />
         {title || 'Recomendados para Voce'}
       </h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

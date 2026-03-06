@@ -40,6 +40,11 @@ interface WorkflowStep {
   completedAt: string | null;
 }
 
+interface WorkflowStartResult {
+  workflowId: string;
+  correlationId: string;
+}
+
 const STATUS_BADGES: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }> = {
   running: { variant: 'default', icon: Loader2 },
   completed: { variant: 'secondary', icon: CheckCircle2 },
@@ -62,11 +67,14 @@ export default function WorkflowsPage() {
     setStarting(true);
     setError('');
     try {
-      const result = await api<{ data: Workflow }>(`/workflows/${name}/start`, {
+      const result = await api<{ data: WorkflowStartResult }>(`/workflows/${name}/start`, {
         method: 'POST',
         body: JSON.stringify({ input: {} }),
       });
-      setWorkflows((prev) => [result.data, ...prev]);
+      const workflowResult = await api<{ data: Workflow }>(
+        `/workflows/${result.data.workflowId}`,
+      );
+      setWorkflows((prev) => [workflowResult.data, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao iniciar workflow');
     } finally {

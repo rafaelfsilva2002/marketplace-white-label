@@ -31,6 +31,28 @@ export function clearTokens(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Response helpers — some endpoints return { success, data }, others return data directly
+// ---------------------------------------------------------------------------
+
+type ApiEnvelope<T> = {
+  success: boolean;
+  data: T;
+};
+
+function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'success' in value &&
+    'data' in value
+  );
+}
+
+export function extractApiData<T>(value: T | ApiEnvelope<T>): T {
+  return isApiEnvelope<T>(value) ? value.data : value;
+}
+
+// ---------------------------------------------------------------------------
 // Refresh lock — prevents concurrent refresh requests
 // ---------------------------------------------------------------------------
 
@@ -50,7 +72,10 @@ async function refreshAccessToken(): Promise<string | null> {
     if (!res.ok) return null;
 
     const json = await res.json();
-    const data = json.data ?? json;
+    const data = extractApiData<{
+      accessToken?: string;
+      refreshToken?: string;
+    }>(json);
 
     if (data?.accessToken && data?.refreshToken) {
       saveTokens(data.accessToken, data.refreshToken);

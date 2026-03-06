@@ -62,8 +62,16 @@ test.describe('Category Detail Page', () => {
     await page.goto('/categories/beleza');
 
     // Should either show category detail content or the not-found page
-    const isNotFound = await page.getByText(/nao foi encontrad|not found|404/i).isVisible().catch(() => false);
-    const hasContent = await page.locator('main').isVisible();
+    await expect(page.locator('main')).toBeVisible();
+
+    const isNotFound = await page
+      .getByRole('heading', { name: /404|nao encontrada|not found/i })
+      .isVisible()
+      .catch(() => false);
+    const hasContent = await page
+      .getByRole('heading', { level: 1 })
+      .isVisible()
+      .catch(() => false);
 
     expect(isNotFound || hasContent).toBe(true);
   });

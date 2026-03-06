@@ -51,8 +51,17 @@ interface Review {
   id: string;
   rating: number;
   comment: string | null;
-  authorName: string;
+  authorName?: string;
+  reviewerId?: string;
   createdAt: string;
+}
+
+interface PaginatedReviews {
+  data: Review[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,10 +102,14 @@ export default function DashboardPage() {
 
       // Fetch recent reviews for this profile
       try {
-        const reviewsData = await api<Review[]>(
-          `/profiles/${profileData.id}/reviews?limit=5`,
+        const reviewsResponse = await api<PaginatedReviews>(
+          `/reviews/profile/${profileData.id}?limit=5`,
         );
-        setReviews(reviewsData);
+        const normalized = reviewsResponse.data.map((review) => ({
+          ...review,
+          authorName: review.authorName ?? review.reviewerId ?? 'Cliente',
+        }));
+        setReviews(normalized);
       } catch {
         // Reviews endpoint may not be available yet — silently ignore
         setReviews([]);
@@ -374,7 +387,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          {review.authorName}
+                          {review.authorName ?? 'Cliente'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(review.createdAt).toLocaleDateString(

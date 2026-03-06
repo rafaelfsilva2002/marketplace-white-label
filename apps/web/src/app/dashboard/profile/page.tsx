@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { api, getAccessToken } from '@/lib/api';
+import { api, extractApiData, getAccessToken } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,11 +54,21 @@ interface Toast {
   message: string;
 }
 
+interface PresignedUploadData {
+  uploadUrl: string;
+  key: string;
+  publicUrl: string;
+  cdnUrl: string;
+}
+
+interface ProfilePhotosResponse {
+  message: string;
+  photos: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const BRAZILIAN_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
@@ -229,8 +239,7 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = getAccessToken();
-    if (!token || !profile) return;
+    if (!getAccessToken() || !profile) return;
 
     const maxSizeMB = 10;
     if (file.size > maxSizeMB * 1024 * 1024) {
@@ -246,28 +255,40 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`${API_URL}/profiles/photos`, {
+      const presignedRaw = await api<
+        PresignedUploadData | { success: boolean; data: PresignedUploadData }
+      >('/uploads/presigned', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType: file.type,
+          folder: 'profiles',
+        }),
+      });
+      const presigned = extractApiData<PresignedUploadData>(presignedRaw);
+
+      const uploadResponse = await fetch(presigned.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
       });
 
-      if (!response.ok) {
-        throw new Error('Falha no upload');
+      if (!uploadResponse.ok) {
+        throw new Error('Falha ao enviar arquivo para storage');
       }
 
-      const result = await response.json();
-      const photoUrl: string = result.url || result.path || result.photoUrl;
+      const photosRaw = await api<
+        ProfilePhotosResponse | { success: boolean; data: ProfilePhotosResponse }
+      >(`/profiles/${profile.id}/photos`, {
+        method: 'POST',
+        body: JSON.stringify({ photos: [presigned.key] }),
+      });
+      const photosResult = extractApiData<ProfilePhotosResponse>(photosRaw);
 
-      if (photoUrl) {
-        setProfile((prev) =>
-          prev ? { ...prev, photos: [...prev.photos, photoUrl] } : prev,
-        );
-        addToast('success', 'Foto enviada com sucesso!');
-      }
+      setProfile((prev) =>
+        prev ? { ...prev, photos: photosResult.photos } : prev,
+      );
+      addToast('success', 'Foto enviada com sucesso!');
     } catch {
       addToast('error', 'Erro ao enviar foto. Tente novamente.');
     } finally {
@@ -278,10 +299,23 @@ export default function ProfilePage() {
     }
   }
 
-  function removePhoto(index: number) {
-    setProfile((prev) =>
-      prev ? { ...prev, photos: prev.photos.filter((_, i) => i !== index) } : prev,
-    );
+  async function removePhoto(index: number) {
+    if (!getAccessToken() || !profile) return;
+
+    try {
+      const raw = await api<
+        ProfilePhotosResponse | { success: boolean; data: ProfilePhotosResponse }
+      >(`/profiles/${profile.id}/photos/${index}`, {
+        method: 'DELETE',
+      });
+      const result = extractApiData<ProfilePhotosResponse>(raw);
+      setProfile((prev) =>
+        prev ? { ...prev, photos: result.photos } : prev,
+      );
+      addToast('success', 'Foto removida com sucesso!');
+    } catch {
+      addToast('error', 'Erro ao remover foto.');
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -312,7 +346,6 @@ export default function ProfilePage() {
         city: form.city.trim() || null,
         state: form.state || null,
         services: form.services,
-        photos: profile.photos,
       };
 
       if (form.priceRange.min > 0 || form.priceRange.max > 0) {
@@ -418,7 +451,7 @@ export default function ProfilePage() {
               {profile.photos.map((photo, index) => (
                 <div key={`${photo}-${index}`} className="relative group aspect-square">
                   <img
-                    src={photo.startsWith('http') ? photo : `${API_URL}${photo}`}
+                    src={photo}
                     alt={`Foto ${index + 1}`}
                     className="h-full w-full rounded-lg object-cover border"
                   />

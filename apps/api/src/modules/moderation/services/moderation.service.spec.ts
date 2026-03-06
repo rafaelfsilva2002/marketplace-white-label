@@ -18,10 +18,14 @@ vi.mock('@/common/interceptors/correlation-id.interceptor', () => ({
 // ---------------------------------------------------------------------------
 
 function createChainedSelect(rows: unknown[]) {
+  const offset = vi.fn().mockResolvedValue(rows);
+  const limitAfterOrder = vi.fn().mockReturnValue({ offset });
+  const orderBy = vi.fn().mockReturnValue({ limit: limitAfterOrder });
+
   return {
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
-        orderBy: vi.fn().mockResolvedValue(rows),
+        orderBy,
         limit: vi.fn().mockResolvedValue(rows),
       }),
     }),
@@ -85,6 +89,7 @@ describe('ModerationService', () => {
 
     mockDb = {
       select: vi.fn(),
+      execute: vi.fn(),
       update: vi.fn(),
     };
 
@@ -105,8 +110,31 @@ describe('ModerationService', () => {
   describe('getQueue', () => {
     it('should return paginated moderation queue with profiles and reviews', async () => {
       mockDb.select
-        .mockReturnValueOnce(createChainedSelect([FAKE_PROFILE]))
-        .mockReturnValueOnce(createChainedSelect([FAKE_REVIEW]));
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]));
+
+      mockDb.execute.mockResolvedValueOnce([
+        {
+          id: FAKE_REVIEW.id,
+          type: 'review',
+          entityId: FAKE_REVIEW.id,
+          displayName: null,
+          comment: FAKE_REVIEW.comment,
+          rating: FAKE_REVIEW.rating,
+          createdAt: FAKE_REVIEW.createdAt,
+          status: 'pending_moderation',
+        },
+        {
+          id: FAKE_PROFILE.id,
+          type: 'profile',
+          entityId: FAKE_PROFILE.id,
+          displayName: FAKE_PROFILE.displayName,
+          comment: null,
+          rating: null,
+          createdAt: FAKE_PROFILE.createdAt,
+          status: 'pending_verification',
+        },
+      ]);
 
       const result = await service.getQueue(1, 20);
 
@@ -118,29 +146,60 @@ describe('ModerationService', () => {
     });
 
     it('should filter by profile type only', async () => {
-      mockDb.select.mockReturnValueOnce(createChainedSelect([FAKE_PROFILE]));
+      mockDb.select
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]))
+        .mockReturnValueOnce(
+          createChainedSelect([
+            {
+              id: FAKE_PROFILE.id,
+              type: 'profile',
+              entityId: FAKE_PROFILE.id,
+              displayName: FAKE_PROFILE.displayName,
+              comment: null,
+              rating: null,
+              createdAt: FAKE_PROFILE.createdAt,
+              status: 'pending_verification',
+            },
+          ]),
+        );
 
       const result = await service.getQueue(1, 20, 'profile');
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].type).toBe('profile');
-      expect(mockDb.select).toHaveBeenCalledTimes(1);
+      expect(mockDb.execute).not.toHaveBeenCalled();
     });
 
     it('should filter by review type only', async () => {
-      mockDb.select.mockReturnValueOnce(createChainedSelect([FAKE_REVIEW]));
+      mockDb.select
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]))
+        .mockReturnValueOnce(
+          createChainedSelect([
+            {
+              id: FAKE_REVIEW.id,
+              type: 'review',
+              entityId: FAKE_REVIEW.id,
+              displayName: null,
+              comment: FAKE_REVIEW.comment,
+              rating: FAKE_REVIEW.rating,
+              createdAt: FAKE_REVIEW.createdAt,
+              status: 'pending_moderation',
+            },
+          ]),
+        );
 
       const result = await service.getQueue(1, 20, 'review');
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].type).toBe('review');
-      expect(mockDb.select).toHaveBeenCalledTimes(1);
+      expect(mockDb.execute).not.toHaveBeenCalled();
     });
 
     it('should return empty data when no pending items exist', async () => {
       mockDb.select
-        .mockReturnValueOnce(createChainedSelect([]))
-        .mockReturnValueOnce(createChainedSelect([]));
+        .mockReturnValueOnce(createChainedSelect([{ total: 0 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 0 }]));
+      mockDb.execute.mockResolvedValueOnce([]);
 
       const result = await service.getQueue(1, 20);
 
@@ -156,8 +215,20 @@ describe('ModerationService', () => {
       ];
 
       mockDb.select
-        .mockReturnValueOnce(createChainedSelect(fakeProfiles))
-        .mockReturnValueOnce(createChainedSelect([]));
+        .mockReturnValueOnce(createChainedSelect([{ total: 3 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 0 }]));
+      mockDb.execute.mockResolvedValueOnce([
+        {
+          id: 'p3',
+          type: 'profile',
+          entityId: 'p3',
+          displayName: FAKE_PROFILE.displayName,
+          comment: null,
+          rating: null,
+          createdAt: fakeProfiles[2].createdAt,
+          status: 'pending_verification',
+        },
+      ]);
 
       const result = await service.getQueue(2, 2);
 
@@ -169,8 +240,9 @@ describe('ModerationService', () => {
 
     it('should use default page=1 and limit=20', async () => {
       mockDb.select
-        .mockReturnValueOnce(createChainedSelect([]))
-        .mockReturnValueOnce(createChainedSelect([]));
+        .mockReturnValueOnce(createChainedSelect([{ total: 0 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 0 }]));
+      mockDb.execute.mockResolvedValueOnce([]);
 
       const result = await service.getQueue();
 
@@ -191,13 +263,92 @@ describe('ModerationService', () => {
       };
 
       mockDb.select
-        .mockReturnValueOnce(createChainedSelect([oldProfile]))
-        .mockReturnValueOnce(createChainedSelect([newReview]));
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]));
+      mockDb.execute.mockResolvedValueOnce([
+        {
+          id: 'new-r',
+          type: 'review',
+          entityId: 'new-r',
+          displayName: null,
+          comment: newReview.comment,
+          rating: newReview.rating,
+          createdAt: newReview.createdAt,
+          status: 'pending_moderation',
+        },
+        {
+          id: 'old-p',
+          type: 'profile',
+          entityId: 'old-p',
+          displayName: oldProfile.displayName,
+          comment: null,
+          rating: null,
+          createdAt: oldProfile.createdAt,
+          status: 'pending_verification',
+        },
+      ]);
 
       const result = await service.getQueue(1, 20);
 
       expect(result.data[0].id).toBe('new-r');
       expect(result.data[1].id).toBe('old-p');
+    });
+
+    it('should coerce count values to number for typed filters', async () => {
+      mockDb.select
+        .mockReturnValueOnce(
+          createChainedSelect([{ total: '5' as unknown as number }]),
+        )
+        .mockReturnValueOnce(
+          createChainedSelect([
+            {
+              id: FAKE_PROFILE.id,
+              type: 'profile',
+              entityId: FAKE_PROFILE.id,
+              displayName: FAKE_PROFILE.displayName,
+              comment: null,
+              rating: null,
+              createdAt: FAKE_PROFILE.createdAt,
+              status: 'pending_verification',
+            },
+          ]),
+        );
+
+      const result = await service.getQueue(1, 2, 'profile');
+
+      expect(result.total).toBe(5);
+      expect(result.totalPages).toBe(3);
+      expect(mockDb.execute).not.toHaveBeenCalled();
+    });
+
+    it('should normalize union SQL rows with string dates and nullable fields', async () => {
+      mockDb.select
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]))
+        .mockReturnValueOnce(createChainedSelect([{ total: 1 }]));
+      mockDb.execute.mockResolvedValueOnce([
+        {
+          id: 'review-string-date',
+          type: 'review',
+          entityId: 'review-string-date',
+          displayName: null,
+          comment: null,
+          rating: null,
+          createdAt: '2026-01-03T12:30:00.000Z',
+          status: 'pending_moderation',
+        },
+      ]);
+
+      const result = await service.getQueue(1, 20);
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].createdAt).toBeInstanceOf(Date);
+      expect(result.data[0].createdAt.toISOString()).toBe(
+        '2026-01-03T12:30:00.000Z',
+      );
+      expect(result.data[0].displayName).toBeUndefined();
+      expect(result.data[0].comment).toBeUndefined();
+      expect(result.data[0].rating).toBeUndefined();
+      expect(mockDb.execute).toHaveBeenCalledTimes(1);
     });
   });
 

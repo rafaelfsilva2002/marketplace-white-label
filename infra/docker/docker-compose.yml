@@ -58,7 +58,7 @@ services:
     container_name: marketplace-web
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: http://api:3001/api/v1
     ports:
       - '3000:3000'
     depends_on:

@@ -25,7 +25,12 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
+    env: {
+      ...process.env,
+      JWT_SECRET:
+        process.env.JWT_SECRET ?? 'e2e-jwt-secret-change-in-production',
+    },
   },
 });

@@ -110,6 +110,23 @@ export class ProfileService {
     return profile;
   }
 
+  async findByUserId(userId: string): Promise<typeof profiles.$inferSelect> {
+    const [profile] = await this.db
+      .select()
+      .from(profiles)
+      .where(and(eq(profiles.userId, userId), eq(profiles.isActive, true)))
+      .orderBy(desc(profiles.createdAt))
+      .limit(1);
+
+    if (!profile) {
+      throw new NotFoundException(
+        `Profile for user ${userId} not found`,
+      );
+    }
+
+    return profile;
+  }
+
   async findAll(
     page: number = 1,
     limit: number = 20,

@@ -13,7 +13,7 @@ test.describe('Smoke Tests', () => {
 
   test('register page loads', async ({ page }) => {
     await page.goto('/register');
-    await expect(page.getByRole('heading')).toContainText(/cadastr|register/i);
+    await expect(page.getByRole('heading')).toContainText(/cadastr|register|criar conta/i);
   });
 
   test('search page loads', async ({ page }) => {

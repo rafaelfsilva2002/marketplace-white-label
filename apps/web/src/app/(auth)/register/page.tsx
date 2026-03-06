@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { api, saveTokens } from '@/lib/api';
+import { api, extractApiData, saveTokens } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,7 +35,10 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const result = await api<{ accessToken: string; refreshToken: string }>('/auth/register', {
+      const raw = await api<
+        { accessToken: string; refreshToken: string } |
+        { success: boolean; data: { accessToken: string; refreshToken: string } }
+      >('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           name: form.name,
@@ -44,6 +47,7 @@ export default function RegisterPage() {
         }),
         noAuth: true,
       });
+      const result = extractApiData<{ accessToken: string; refreshToken: string }>(raw);
 
       saveTokens(result.accessToken, result.refreshToken);
       router.push('/');

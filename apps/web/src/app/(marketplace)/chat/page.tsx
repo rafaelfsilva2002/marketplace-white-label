@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { io, Socket } from 'socket.io-client';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { getAccessToken } from '@/lib/api';
+import { api, extractApiData, getAccessToken } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
 
 interface ConversationItem {
@@ -36,6 +36,14 @@ interface MessageItem {
   isRead: boolean;
   readAt: string | null;
   createdAt: string;
+}
+
+interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 function getCurrentUserId(): string | null {
@@ -76,13 +84,12 @@ export default function ChatPage() {
 
     async function loadConversations() {
       try {
-        const response = await fetch(`${API_URL}/chat/conversations`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
-          const result = await response.json();
-          setConversations(result.data?.data || []);
-        }
+        const raw = await api<
+          PaginatedResult<ConversationItem> |
+          { success: boolean; data: PaginatedResult<ConversationItem> }
+        >('/chat/conversations');
+        const result = extractApiData<PaginatedResult<ConversationItem>>(raw);
+        setConversations(result.data);
       } catch (err) {
         console.error('Failed to load conversations:', err);
       } finally {
@@ -175,14 +182,14 @@ export default function ChatPage() {
     async function loadMessages() {
       setLoadingMessages(true);
       try {
-        const response = await fetch(
-          `${API_URL}/chat/conversations/${selectedConversationId}/messages?limit=50`,
-          { headers: { Authorization: `Bearer ${token}` } },
+        const raw = await api<
+          PaginatedResult<MessageItem> |
+          { success: boolean; data: PaginatedResult<MessageItem> }
+        >(
+          `/chat/conversations/${selectedConversationId}/messages?limit=50`,
         );
-        if (response.ok) {
-          const result = await response.json();
-          setMessages(result.data?.data || []);
-        }
+        const result = extractApiData<PaginatedResult<MessageItem>>(raw);
+        setMessages(result.data);
       } catch (err) {
         console.error('Failed to load messages:', err);
       } finally {
@@ -258,20 +265,20 @@ export default function ChatPage() {
 
   if (!token) {
     return (
-      <main className="container mx-auto px-4 py-16 text-center">
+      <main className="px-4 py-16 text-center lg:px-8">
         <h1 className="text-2xl font-bold mb-4">Chat</h1>
         <p className="text-muted-foreground mb-4">
           Voce precisa estar logado para acessar o chat.
         </p>
         <Button asChild>
-          <a href="/login">Entrar</a>
+          <Link href="/login">Entrar</Link>
         </Button>
       </main>
     );
   }
 
   return (
-    <main className="container mx-auto px-4 py-4">
+    <main className="px-4 py-4 lg:px-8">
       <h1 className="text-2xl font-bold mb-4">Mensagens</h1>
 
       <div className="flex border rounded-lg overflow-hidden bg-background" style={{ height: 'calc(100vh - 200px)' }}>

@@ -24,6 +24,17 @@ export interface ModerationQueueItem {
   status: string;
 }
 
+type ModerationQueueSqlRow = {
+  id: string;
+  type: 'profile' | 'review';
+  entityId: string;
+  displayName: string | null;
+  comment: string | null;
+  rating: number | null;
+  createdAt: Date | string;
+  status: string;
+};
+
 @Injectable()
 export class ModerationService {
   private readonly logger = new StructuredLogger('ModerationService');
@@ -40,62 +51,159 @@ export class ModerationService {
   ): Promise<PaginatedResult<ModerationQueueItem>> {
     const correlationId = getCorrelationId();
     const offset = (page - 1) * limit;
-    const items: ModerationQueueItem[] = [];
+    const profileWhere = and(
+      eq(profiles.isVerified, false),
+      eq(profiles.isActive, true),
+    );
+    const reviewWhere = and(
+      sql`${reviews.moderatedBy} IS NULL`,
+      eq(reviews.isVisible, 'true'),
+    );
+
     let total = 0;
+    let paginatedItems: ModerationQueueItem[] = [];
 
-    if (!type || type === 'profile') {
-      const unverifiedProfiles = await this.db
-        .select()
+    if (type === 'profile') {
+      const [countRow] = await this.db
+        .select({ total: count() })
         .from(profiles)
-        .where(
-          and(
-            eq(profiles.isVerified, false),
-            eq(profiles.isActive, true),
-          ),
-        )
-        .orderBy(desc(profiles.createdAt));
+        .where(profileWhere)
+        .limit(1);
 
-      for (const p of unverifiedProfiles) {
-        items.push({
-          id: p.id,
-          type: 'profile',
-          entityId: p.id,
-          displayName: p.displayName,
-          createdAt: p.createdAt,
-          status: 'pending_verification',
-        });
-      }
-    }
+      total = Number(countRow?.total ?? 0);
 
-    if (!type || type === 'review') {
-      const pendingReviews = await this.db
-        .select()
+      const rows = await this.db
+        .select({
+          id: profiles.id,
+          type: sql<'profile'>`'profile'`,
+          entityId: profiles.id,
+          displayName: profiles.displayName,
+          comment: sql<string | null>`null`,
+          rating: sql<number | null>`null`,
+          createdAt: profiles.createdAt,
+          status: sql<string>`'pending_verification'`,
+        })
+        .from(profiles)
+        .where(profileWhere)
+        .orderBy(desc(profiles.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      paginatedItems = rows.map((row) => ({
+        id: row.id,
+        type: 'profile',
+        entityId: row.entityId,
+        displayName: row.displayName ?? undefined,
+        comment: undefined,
+        rating: undefined,
+        createdAt:
+          row.createdAt instanceof Date
+            ? row.createdAt
+            : new Date(row.createdAt),
+        status: row.status,
+      }));
+    } else if (type === 'review') {
+      const [countRow] = await this.db
+        .select({ total: count() })
         .from(reviews)
-        .where(
-          and(
-            sql`${reviews.moderatedBy} IS NULL`,
-            eq(reviews.isVisible, 'true'),
-          ),
-        )
-        .orderBy(desc(reviews.createdAt));
+        .where(reviewWhere)
+        .limit(1);
 
-      for (const r of pendingReviews) {
-        items.push({
-          id: r.id,
-          type: 'review',
-          entityId: r.id,
-          comment: r.comment ?? undefined,
-          rating: r.rating,
-          createdAt: r.createdAt,
-          status: 'pending_moderation',
-        });
-      }
+      total = Number(countRow?.total ?? 0);
+
+      const rows = await this.db
+        .select({
+          id: reviews.id,
+          type: sql<'review'>`'review'`,
+          entityId: reviews.id,
+          displayName: sql<string | null>`null`,
+          comment: reviews.comment,
+          rating: reviews.rating,
+          createdAt: reviews.createdAt,
+          status: sql<string>`'pending_moderation'`,
+        })
+        .from(reviews)
+        .where(reviewWhere)
+        .orderBy(desc(reviews.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      paginatedItems = rows.map((row) => ({
+        id: row.id,
+        type: 'review',
+        entityId: row.entityId,
+        displayName: undefined,
+        comment: row.comment ?? undefined,
+        rating: row.rating ?? undefined,
+        createdAt:
+          row.createdAt instanceof Date
+            ? row.createdAt
+            : new Date(row.createdAt),
+        status: row.status,
+      }));
+    } else {
+      const [[profileCountRow], [reviewCountRow]] = await Promise.all([
+        this.db
+          .select({ total: count() })
+          .from(profiles)
+          .where(profileWhere)
+          .limit(1),
+        this.db
+          .select({ total: count() })
+          .from(reviews)
+          .where(reviewWhere)
+          .limit(1),
+      ]);
+
+      total =
+        Number(profileCountRow?.total ?? 0) +
+        Number(reviewCountRow?.total ?? 0);
+
+      const rows = await this.db.execute(sql<ModerationQueueSqlRow>`
+        select
+          ${profiles.id} as "id",
+          'profile'::text as "type",
+          ${profiles.id} as "entityId",
+          ${profiles.displayName} as "displayName",
+          null::text as "comment",
+          null::integer as "rating",
+          ${profiles.createdAt} as "createdAt",
+          'pending_verification'::text as "status"
+        from ${profiles}
+        where ${profiles.isVerified} = false and ${profiles.isActive} = true
+        union all
+        select
+          ${reviews.id} as "id",
+          'review'::text as "type",
+          ${reviews.id} as "entityId",
+          null::text as "displayName",
+          ${reviews.comment} as "comment",
+          ${reviews.rating} as "rating",
+          ${reviews.createdAt} as "createdAt",
+          'pending_moderation'::text as "status"
+        from ${reviews}
+        where ${reviews.moderatedBy} is null and ${reviews.isVisible} = 'true'
+        order by "createdAt" desc
+        limit ${limit}
+        offset ${offset}
+      `);
+
+      const normalizedRows = rows as unknown as ModerationQueueSqlRow[];
+
+      paginatedItems = normalizedRows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        entityId: row.entityId,
+        displayName: row.displayName ?? undefined,
+        comment: row.comment ?? undefined,
+        rating: row.rating ?? undefined,
+        createdAt:
+          row.createdAt instanceof Date
+            ? row.createdAt
+            : new Date(row.createdAt),
+        status: row.status,
+      }));
     }
-
-    items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-    total = items.length;
-    const paginatedItems = items.slice(offset, offset + limit);
 
     this.logger.logWithData(
       'info',

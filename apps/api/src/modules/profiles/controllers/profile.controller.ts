@@ -70,6 +70,13 @@ export class ProfileController {
     return this.profileService.create(dto, req.correlationId);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async findMine(@CurrentUser() user: JwtUser) {
+    const profile = await this.profileService.findByUserId(user.id);
+    return this.transformPhotos(profile);
+  }
+
   @Get(':id')
   async findById(
     @Param('id', ParseUUIDPipe) id: string,
