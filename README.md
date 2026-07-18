@@ -15,7 +15,7 @@
 
 ## Sobre o Projeto
 
-O **Marketplace FTM** e uma plataforma completa de marketplace de servicos profissionais, inspirada no Fatal Model. Diferente de marketplaces tradicionais, a inteligencia artificial esta embutida em toda a experiencia desde o dia 1 — busca semantica com pgvector, recomendacao inteligente por embeddings, moderacao automatica de fotos e texto via Vision API, deteccao de fraude, analise de sentimento de avaliacoes e precificacao dinamica.
+O **Marketplace FTM** e uma plataforma completa de marketplace de servicos profissionais. Diferente de marketplaces tradicionais, a inteligencia artificial esta embutida em toda a experiencia desde o dia 1 — busca semantica com pgvector, recomendacao inteligente por embeddings, moderacao automatica de fotos e texto via Vision API, deteccao de fraude, analise de sentimento de avaliacoes e precificacao dinamica.
 
 A plataforma suporta pagamentos via Stripe Connect e trilhos cripto (Ethereum, Polygon, Solana) com custodia MPC via Dfns, compliance AML integrado e on/off ramp BRL-cripto. Conta com chat em tempo real (Socket.IO), push notifications (Expo Push API), dashboard de analytics para admins, sistema de categorias hierarquicas, internacionalizacao (pt-BR / en-US) e um app mobile completo em React Native/Expo com 15 telas.
 
